@@ -1,0 +1,318 @@
+#!/usr/bin/env python
+
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+import qimage2ndarray
+
+import sys
+import numpy as np
+from pypylon import pylon
+
+import platform
+import ctypes
+import itertools
+import string
+
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
+class MainApp(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        self.video_size = QSize(96, 480)
+        self.camera_listbox_size = QSize(120, 400)
+        self.canvas = FigureCanvas(plt.Figure(figsize=(5,2)))
+        self.setWindowTitle('ENCIRC')
+        self.setWindowIcon(QIcon('i3dr_logo.png'))
+        self.setup_ui()
+        self.frame_taken = 0
+        self.start_clicked = False
+
+    def setup_ui(self):
+        """Initialize widgets.
+        """  
+        self.image_labelL = QLabel()
+        self.image_labelL.setFixedSize(self.video_size)
+        
+        self.slider = QSlider(Qt.Horizontal, self)
+        self.slider.setRange(0, 10)
+        self.slider.setValue(0)
+        self.slider.setGeometry(0, 0, 120, 80)
+        self.slider.valueChanged[int].connect(self.changeValue)
+        
+        self.exposureValue = QLabel(self)
+        self.exposureValue.setText("0")
+        
+        self.save_msg = QLabel(self)
+        
+        self.exposureText = QLabel(self)
+        self.exposureText.setText("Exposure")
+        
+        self.cameraListBox = QListWidget()
+        self.cameraListBox.setFixedSize(self.camera_listbox_size)
+        
+        # self.cameraList = QComboBox(self)
+        self.getCameraList()
+        self.insert_ax()
+        self.reset_graphdata()
+        
+        self.cameraRefreshBtn = QPushButton("Refresh List")
+        self.cameraRefreshBtn.clicked.connect(self.getCameraList)
+        self.cameraConnectBtn = QPushButton("Connect")
+        self.cameraConnectBtn.setStyleSheet("background-color: green")
+        self.cameraConnectBtn.setCheckable(True)
+        self.cameraConnectBtn.clicked.connect(self.control_camera)
+        self.cameraStatusText = QLabel(self)
+        self.cameraStatusText.setText("No camera connected")
+
+        self.clearBtn = QPushButton("Clear Graph")
+        self.clearBtn.setStyleSheet("background-color: green")
+        self.clearBtn.clicked.connect(self.clear_graph)
+
+        self.bottlePartBtn = QPushButton(" ")
+        self.bottleAllBtn = QPushButton(" ")
+        self.bottlePartText = QLabel(self)
+        self.bottlePartText.setText("Part of Bottle")
+        self.bottleAllText = QLabel(self)
+        self.bottleAllText.setText("Whole Bottle")
+        self.recommendationText = QLabel(self)
+        self.recommendationText.setText("Recommendation: ")
+        self.recommendedText = QLabel(self)
+
+        self.main_layout = QHBoxLayout()
+        self.image_display = QHBoxLayout()
+        self.image_display.addWidget(self.image_labelL)
+        self.image_display.addWidget(self.canvas)
+        
+        self.devicelist_layout = QVBoxLayout()
+        self.devicelist_layout.addWidget(self.cameraRefreshBtn)
+        self.devicelist_layout.addWidget(self.cameraConnectBtn)
+        self.devicelist_layout.addWidget(self.cameraListBox)
+        
+        self.exposure_display = QHBoxLayout()
+        self.exposure_display.addWidget(self.exposureText)
+        self.exposure_display.addWidget(self.exposureValue)
+        
+        self.feature_layout = QVBoxLayout()
+        self.feature_layout.addLayout(self.exposure_display)
+        self.feature_layout.addWidget(self.slider)
+        self.feature_layout.addWidget(self.clearBtn)
+        
+        self.devicelist_layout.addLayout(self.feature_layout)
+        
+        self.image_display_layout = QVBoxLayout()
+        self.image_display_layout.addWidget(self.cameraStatusText)
+        self.image_display_layout.addLayout(self.image_display)
+        self.image_display_layout.addWidget(self.save_msg)
+
+        self.inspect_layout = QVBoxLayout()
+        self.part_layout = QHBoxLayout()
+        self.part_layout.addWidget(self.bottlePartText)
+        self.part_layout.addWidget(self.bottlePartBtn)
+        self.inspect_layout.addLayout(self.part_layout)
+        self.ROI_layout = QHBoxLayout()
+        self.ROI_layout.addWidget(self.bottleAllText)
+        self.ROI_layout.addWidget(self.bottleAllBtn)
+        self.inspect_layout.addLayout(self.ROI_layout)
+        self.recommendation_layout = QHBoxLayout()
+        self.recommendation_layout.addWidget(self.recommendationText)
+        self.recommendation_layout.addWidget(self.recommendedText)
+        self.inspect_layout.addLayout(self.recommendation_layout)
+        
+        self.main_layout.addLayout(self.devicelist_layout)
+        self.main_layout.addLayout(self.image_display_layout)
+        self.main_layout.addLayout(self.inspect_layout)
+
+        self.setLayout(self.main_layout)
+        
+    def control_camera(self):
+        if self.cameraConnectBtn.isChecked():
+            self.setup_camera()
+            self.cameraConnectBtn.setText("Disconnect")
+            self.cameraConnectBtn.setStyleSheet("background-color: red")
+        else:
+            self.disconnect_camera()
+            self.cameraConnectBtn.setText("Connect")
+            self.cameraConnectBtn.setStyleSheet("background-color: green")
+
+    def setup_camera(self):
+        """Initialize camera.
+        """  
+        try:
+            device_info = self.device_connected
+            camera_name = device_info.GetUserDefinedName()
+            self.cameraStatusText.setText(camera_name+" Connected")
+        except:
+            device_list = listDevices()
+            device_info = device_list[0]
+            camera_name = device_info.getUniqueSerial()
+            self.cameraStatusText.setText(camera_name+" Connected")
+        
+        # Create stereo camera device information from parameters
+        self.camera = pylon.InstantCamera(self.tlFactory.CreateDevice(device_info))
+        self.camera.Open()
+
+        self.camera.StartGrabbing()
+    
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.display_video_stream)
+        self.timer.start(0)
+
+    def display_video_stream(self):
+        """Read frame from camera and repaint QLabel widget.
+        """          
+        read_result = self.camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
+        
+        if read_result.GrabSucceeded():
+            self.ax.cla()
+            # self.ax.set_ylim([0,260])
+            self.ax.set_xlim([0,100])
+            frame = read_result.Array
+            self.sample1 = frame[120:320,200:300,0]
+            self.sample2 = frame[120:320,350:500,0]
+            self.sample3 = frame[120:320,350:850,0]
+            self.sample4 = frame[120:320,400:1200,0]
+
+            if not read_result.IsValid:
+                print("Failed to read from camera")
+
+            # print(np.shape(frame))
+            frameROI = frame[400:800,:,:]
+            frame_display = np.rot90(frameROI,1)
+
+            image = qimage2ndarray.array2qimage(frame_display)  #SOLUTION FOR MEMORY LEAK
+            self.image_labelL.setPixmap(QPixmap.fromImage(image))
+
+            self.s1, dataSum1 = self.shiftdata(self.s1, self.sample1)
+            self.s2, dataSum2 = self.shiftdata(self.s2, self.sample2)
+            self.s3, dataSum3 = self.shiftdata(self.s3, self.sample3)
+            self.s4, dataSum4 = self.shiftdata(self.s4, self.sample4)
+            self.part_inspection(np.min([dataSum1,dataSum2,dataSum3,dataSum4]))
+            self.ROI_inspection(np.sum(frameROI))
+            self.ax.plot(self.t, self.s1, color='red')
+            self.ax.plot(self.t, self.s2, color='green')
+            self.ax.plot(self.t, self.s3, color='blue')
+            self.ax.plot(self.t, self.s4, color='black')
+            self.canvas.draw()
+
+        read_result.Release()
+
+    def insert_ax(self):
+        self.ax = self.canvas.figure.subplots()
+        # self.ax.set_ylim([0,260])
+        self.ax.set_xlim([0,100])
+        self.ax.set(xlabel='time (s)', ylabel='Pixel',
+            title='RGB')
+
+    def clear_graph(self):
+        self.reset_graphdata()
+
+
+    def disconnect_camera(self):
+        if not self.camera.IsCameraDeviceRemoved():
+            # self.phaseCam.stopCapture()
+            self.camera.Close()
+            self.timer.stop()
+            self.image_labelL.clear()
+            self.cameraStatusText.setText("No camera connected")
+            
+    def getCameraList(self):
+        self.cameraListBox.clear()
+        self.tlFactory = pylon.TlFactory.GetInstance()
+        self.device_list = self.tlFactory.EnumerateDevices()
+        for device_info in self.device_list:
+            camera_name = device_info.GetUserDefinedName()
+            # self.cameraList.addItem(camera_name)
+            # self.cameraList.activated.connect(self.itemClicked_event)
+            self.cameraListBox.addItem(camera_name)
+            self.cameraListBox.currentRowChanged.connect(self.itemClicked_event)
+            
+    def get_available_drives(self):
+        if 'Windows' not in platform.system():
+            return []
+        drive_bitmask = ctypes.cdll.kernel32.GetLogicalDrives()
+        return list(itertools.compress(string.ascii_uppercase,
+                map(lambda x:ord(x) - ord('0'), bin(drive_bitmask)[:1:-1])))
+            
+    def printtime(self, now):
+        y = str(now.year)
+        month = now.month
+        m = self.addZeroDigit(month)
+
+        day = now.day
+        d = self.addZeroDigit(day)
+
+        hour = now.hour
+        h = self.addZeroDigit(hour)
+
+        min = now.minute
+        mn = self.addZeroDigit(min)
+
+        sec = now.second
+        s = self.addZeroDigit(sec)
+            
+        return y,m,d,h,mn,s
+    
+    def addZeroDigit(self, number):
+        if number < 10:
+            result = '0'+str(number)
+        else:
+            result = str(number)
+            
+        return result
+    
+    def shiftdata(self,data_array,data):
+        data_array = np.roll(data_array,1)
+        data_sum = np.sum(data)
+        data_array[0] = data_sum
+
+        return data_array, data_sum
+    
+    def reset_graphdata(self):
+        self.ax.cla()
+        # self.ax.set_ylim([0,260])
+        self.ax.set_xlim([0,100])
+        self.s1 = np.zeros(100)
+        self.s2 = np.zeros(100)
+        self.s3 = np.zeros(100)
+        self.s4 = np.zeros(100)
+        self.t = np.arange(100)
+
+    def part_inspection(self, sumValue):
+        if sumValue < 100000:
+            self.bottlePartBtn.setStyleSheet("background-color: green")
+            self.recommendedText.setText("ACCEPT")
+        elif 100001<sumValue<200000:
+            self.bottlePartBtn.setStyleSheet("background-color: orange")
+            self.recommendedText.setText("INSPECT")
+        elif sumValue > 200001:
+            self.bottlePartBtn.setStyleSheet("background-color: red")
+            self.recommendedText.setText("REJECT")
+
+    def ROI_inspection(self, sumValue):
+        if sumValue < 500000:
+            self.bottleAllBtn.setStyleSheet("background-color: green")
+            self.recommendedText.setText("ACCEPT")
+        elif 500001<sumValue<700000:
+            self.bottleAllBtn.setStyleSheet("background-color: orange")
+            self.recommendedText.setText("INSPECT")
+        elif sumValue > 700001:
+            self.bottleAllBtn.setStyleSheet("background-color: red")
+            self.recommendedText.setText("REJECT")
+    
+    def changeValue(self, value):
+        self.exposureValue.setText(str(value))
+        #change3: move label position up(20 to 30)
+        self.exposureValue.move(self.slider.x() + value, self.slider.y() - 30)
+        
+    def itemClicked_event(self,index):
+        # print(index)
+        self.device_connected = self.device_list[index]
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    win = MainApp()
+    win.show()
+    sys.exit(app.exec_())

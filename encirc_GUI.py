@@ -5,6 +5,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 import qimage2ndarray
 
+import cv2
 import sys
 import numpy as np
 from pypylon import pylon
@@ -21,7 +22,7 @@ class MainApp(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.video_size = QSize(96, 480)
+        self.video_size = QSize(160, 768)
         self.camera_listbox_size = QSize(120, 400)
         self.canvas = FigureCanvas(plt.Figure(figsize=(5,2)))
         self.setWindowTitle('ENCIRC')
@@ -168,19 +169,20 @@ class MainApp(QWidget):
         if read_result.GrabSucceeded():
             self.ax.cla()
             # self.ax.set_ylim([0,260])
-            self.ax.set_xlim([0,100])
+            self.ax.set_xlim([0,500])
             frame = read_result.Array
-            self.sample1 = frame[120:320,200:300,0]
-            self.sample2 = frame[120:320,350:500,0]
-            self.sample3 = frame[120:320,350:850,0]
-            self.sample4 = frame[120:320,400:1200,0]
 
             if not read_result.IsValid:
                 print("Failed to read from camera")
 
-            # print(np.shape(frame))
-            frameROI = frame[400:800,:,:]
-            frame_display = np.rot90(frameROI,1)
+            frameROI = frame[400:800,:]
+            self.sample1 = frameROI[120:320,200:300]
+            self.sample2 = frameROI[120:320,350:500]
+            self.sample3 = frameROI[120:320,350:850]
+            self.sample4 = frameROI[120:320,400:1200]
+
+            frameROI_display = cv2.resize(frameROI,(768,160))
+            frame_display = np.rot90(frameROI_display,1)
 
             image = qimage2ndarray.array2qimage(frame_display)  #SOLUTION FOR MEMORY LEAK
             self.image_labelL.setPixmap(QPixmap.fromImage(image))
@@ -189,13 +191,14 @@ class MainApp(QWidget):
             self.s2, dataSum2 = self.shiftdata(self.s2, self.sample2)
             self.s3, dataSum3 = self.shiftdata(self.s3, self.sample3)
             self.s4, dataSum4 = self.shiftdata(self.s4, self.sample4)
-            self.part_inspection(np.min([dataSum1,dataSum2,dataSum3,dataSum4]))
-            self.ROI_inspection(np.sum(frameROI))
             self.ax.plot(self.t, self.s1, color='red')
             self.ax.plot(self.t, self.s2, color='green')
             self.ax.plot(self.t, self.s3, color='blue')
             self.ax.plot(self.t, self.s4, color='black')
             self.canvas.draw()
+            self.part_inspection(np.max([dataSum1,dataSum2,dataSum3,dataSum4]))
+            self.ROI_inspection(np.sum(frameROI))
+
 
         read_result.Release()
 
@@ -208,6 +211,7 @@ class MainApp(QWidget):
 
     def clear_graph(self):
         self.reset_graphdata()
+        self.canvas.draw()
 
 
     def disconnect_camera(self):
@@ -273,12 +277,12 @@ class MainApp(QWidget):
     def reset_graphdata(self):
         self.ax.cla()
         # self.ax.set_ylim([0,260])
-        self.ax.set_xlim([0,100])
-        self.s1 = np.zeros(100)
-        self.s2 = np.zeros(100)
-        self.s3 = np.zeros(100)
-        self.s4 = np.zeros(100)
-        self.t = np.arange(100)
+        self.ax.set_xlim([0,500])
+        self.s1 = np.zeros(500)
+        self.s2 = np.zeros(500)
+        self.s3 = np.zeros(500)
+        self.s4 = np.zeros(500)
+        self.t = np.arange(500)
 
     def part_inspection(self, sumValue):
         if sumValue < 100000:

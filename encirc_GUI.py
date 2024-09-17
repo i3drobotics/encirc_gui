@@ -316,6 +316,15 @@ class MainApp(QWidget):
         # print(index)
         self.device_connected = self.device_list[index]
 
+    def closeEvent(self, event):
+        try:
+            self.disconnect_camera()
+            print("Camera disconnected.")
+        except:
+            pass
+        print("Closing...")
+        event.accept()
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = MainApp()

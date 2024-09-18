@@ -221,10 +221,13 @@ class MainApp(QWidget):
                 self.s2, dataSum2 = self.shiftdata(self.s2, self.sample2)
                 self.s3, dataSum3 = self.shiftdata(self.s3, self.sample3)
                 self.s4, dataSum4 = self.shiftdata(self.s4, self.sample4)
-                self.ax.plot(self.t, self.s1, color='red')
-                self.ax.plot(self.t, self.s2, color='green')
-                self.ax.plot(self.t, self.s3, color='blue')
-                self.ax.plot(self.t, self.s4, color='grey')
+
+                line1, = self.ax.plot(self.t, self.s1, color='red', label="Region 1")
+                line2, = self.ax.plot(self.t, self.s2, color='green', label="Region 2")
+                line3, = self.ax.plot(self.t, self.s3, color='blue', label="Region 3")
+                line4, = self.ax.plot(self.t, self.s4, color='yellow', label="Region 4")
+                self.ax.legend(handles=[line1, line2, line3, line4], loc='upper right').set_visible(True)
+
                 self.canvas.draw()
                 self.part_inspection(np.max([dataSum1,dataSum2,dataSum3,dataSum4]))
                 self.ROI_inspection(np.sum(frameROI))

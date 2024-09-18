@@ -56,7 +56,8 @@ class MainApp(QWidget):
         self.cameraListBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # Allow expansion
         
         self.getCameraList()
-        self.insert_ax()
+        self.ax = self.canvas.figure.subplots()
+        self.ax = self.insert_ax(self.ax)
         self.reset_graphdata()
         
         self.cameraRefreshBtn = QPushButton("Refresh List")
@@ -171,6 +172,7 @@ class MainApp(QWidget):
             self.ax.cla()
             # self.ax.set_ylim([0,260])
             self.ax.set_xlim([0,500])
+            self.ax = self.insert_ax(self.ax)
             frame = read_result.Array
 
             if not read_result.IsValid:
@@ -203,12 +205,13 @@ class MainApp(QWidget):
 
         read_result.Release()
 
-    def insert_ax(self):
-        self.ax = self.canvas.figure.subplots()
+    def insert_ax(self, ax):
         # self.ax.set_ylim([0,260])
-        self.ax.set_xlim([0,100])
-        self.ax.set(xlabel='time (s)', ylabel='Pixel',
+        ax.set_xlim([0,500])
+        ax.set(xlabel='time (s)', ylabel='Intensity',
             title='RGB')
+        
+        return ax
 
     def clear_graph(self):
         self.reset_graphdata()

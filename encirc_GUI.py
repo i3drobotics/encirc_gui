@@ -30,8 +30,6 @@ class MainApp(QWidget):
         self.setWindowTitle('ENCIRC')
         self.setWindowIcon(QIcon('i3dr_logo.png'))
         self.setup_ui()
-        self.frame_taken = 0
-        self.start_clicked = False
 
     def setup_ui(self):
         """Initialize widgets.
@@ -73,7 +71,9 @@ class MainApp(QWidget):
         self.clearBtn.clicked.connect(self.clear_graph)
 
         self.bottlePartBtn = QPushButton(" ")
+        self.bottlePartBtn.setFixedSize(QSize(100, 100))
         self.bottleAllBtn = QPushButton(" ")
+        self.bottleAllBtn.setFixedSize(QSize(100, 100))
         self.bottlePartText = QLabel(self)
         self.bottlePartText.setText("Part of Bottle")
         self.bottleAllText = QLabel(self)
@@ -164,7 +164,8 @@ class MainApp(QWidget):
 
     def display_video_stream(self):
         """Read frame from camera and repaint QLabel widget.
-        """          
+        """
+        self.camera.ExposureTime.SetValue(self.slider.value()*5000+5000)  # 100000 microsecond          
         read_result = self.camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         
         if read_result.GrabSucceeded():

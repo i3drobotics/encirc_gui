@@ -26,6 +26,7 @@ class MainApp(QWidget):
         self.video_size = QSize(160, 768)
         self.camera_listbox_size = QSize(120, 400)
         self.canvas = FigureCanvas(plt.Figure(figsize=(5,2)))
+        self.ax = self.canvas.figure.subplots()
         self.setWindowTitle('ENCIRC')
         self.setWindowIcon(QIcon('i3dr_logo.png'))
         self.setup_ui()
@@ -56,8 +57,6 @@ class MainApp(QWidget):
         self.cameraListBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # Allow expansion
         
         self.getCameraList()
-        self.ax = self.canvas.figure.subplots()
-        self.ax = self.insert_ax(self.ax)
         self.reset_graphdata()
         
         self.cameraRefreshBtn = QPushButton("Refresh List")
@@ -170,8 +169,6 @@ class MainApp(QWidget):
         
         if read_result.GrabSucceeded():
             self.ax.cla()
-            # self.ax.set_ylim([0,260])
-            self.ax.set_xlim([0,500])
             self.ax = self.insert_ax(self.ax)
             frame = read_result.Array
 
@@ -281,7 +278,7 @@ class MainApp(QWidget):
     def reset_graphdata(self):
         self.ax.cla()
         # self.ax.set_ylim([0,260])
-        self.ax.set_xlim([0,500])
+        self.ax = self.insert_ax(self.ax)
         self.s1 = np.zeros(500)
         self.s2 = np.zeros(500)
         self.s3 = np.zeros(500)

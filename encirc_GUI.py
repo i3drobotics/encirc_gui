@@ -19,6 +19,8 @@ import string
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+from result import Result, combine_results
+
 def set_qdarkstyle_plot_theme():
     plt.rcParams['axes.facecolor'] = '#19232D'
     plt.rcParams['savefig.facecolor'] = '#19232D'
@@ -45,8 +47,9 @@ class MainApp(QWidget):
         self.setWindowIcon(QIcon('i3dr_logo.png'))
         self.setup_ui()
         self.camera = None
-        self.inspection_part = 0
-        self.inspection_ROI = 0
+        self.inspection_part = Result.NO_BOTTLE
+        self.inspection_ROI = Result.NO_BOTTLE
+
 
     def setup_ui(self):
         """Initialize widgets.
@@ -157,6 +160,7 @@ class MainApp(QWidget):
             self.disconnect_camera()
             self.set_connect_button(connected=False)
 
+
     def set_connect_button(self, connected:bool):
         if connected:
             self.cameraConnectBtn.setText("Disconnect")
@@ -165,13 +169,13 @@ class MainApp(QWidget):
             self.cameraConnectBtn.setText("Connect")
             self.cameraConnectBtn.setStyleSheet("background-color: green")
 
+
     def setup_camera(self):
         """Initialize camera.
         """
         if self.camera is not None:
             self.cameraStatusText.setText("Camera already connected.")
             return
-
         device_info = self.device_connected
         camera_name = device_info.GetUserDefinedName()
         self.cameraStatusText.setText(camera_name+" Connected")
@@ -179,12 +183,12 @@ class MainApp(QWidget):
         # Create stereo camera device information from parameters
         self.camera = pylon.InstantCamera(self.tlFactory.CreateDevice(device_info))
         self.camera.Open()
-
         self.camera.StartGrabbing()
     
         self.timer = QTimer()
         self.timer.timeout.connect(self.display_video_stream)
         self.timer.start(0)
+
 
     def display_video_stream(self):
         """Read frame from camera and repaint QLabel widget.
@@ -217,22 +221,18 @@ class MainApp(QWidget):
                 self.s2, dataSum2 = self.shiftdata(self.s2, self.sample2)
                 self.s3, dataSum3 = self.shiftdata(self.s3, self.sample3)
                 self.s4, dataSum4 = self.shiftdata(self.s4, self.sample4)
-                self.ax.plot(self.t, self.s1, color='red')
-                self.ax.plot(self.t, self.s2, color='green')
-                self.ax.plot(self.t, self.s3, color='blue')
-                self.ax.plot(self.t, self.s4, color='grey')
+
+                line1, = self.ax.plot(self.t, self.s1, color='red', label="Region 1")
+                line2, = self.ax.plot(self.t, self.s2, color='green', label="Region 2")
+                line3, = self.ax.plot(self.t, self.s3, color='blue', label="Region 3")
+                line4, = self.ax.plot(self.t, self.s4, color='yellow', label="Region 4")
+                self.ax.legend(handles=[line1, line2, line3, line4], loc='upper right').set_visible(True)
+
                 self.canvas.draw()
                 self.part_inspection(np.max([dataSum1,dataSum2,dataSum3,dataSum4]))
                 self.ROI_inspection(np.sum(frameROI))
-                inspection_result = np.max([self.inspection_part,self.inspection_ROI])
-                if inspection_result == 3:
-                    self.recommendedText.setText("REJECT")
-                elif inspection_result == 2:
-                    self.recommendedText.setText("INSPECT")
-                elif inspection_result == 1:
-                    self.recommendedText.setText("ACCEPT")
-                else:
-                    self.recommendedText.setText("NO BOTTLE")
+                inspection_result = combine_results([self.inspection_part, self.inspection_ROI])
+                self.recommendedText.setText(inspection_result.name.replace("_"," ").title())
             read_result.Release()
 
         except pylon.RuntimeException as e:
@@ -244,12 +244,14 @@ class MainApp(QWidget):
             self.getCameraList()
             self.set_connect_button(connected=False)
 
+
     def insert_ax(self, ax):
         # self.ax.set_ylim([0,260])
         ax.set_xlim([0,500])
         ax.set(xlabel='time (s)', ylabel='Intensity',
             title='RGB')
         return ax
+
 
     def clear_graph(self):
         self.reset_graphdata()
@@ -271,6 +273,7 @@ class MainApp(QWidget):
         self.cameraStatusText.setText("No camera connected")
         self.camera = None
             
+
     def getCameraList(self):
         self.cameraListBox.clear()
         self.tlFactory = pylon.TlFactory.GetInstance()
@@ -286,7 +289,6 @@ class MainApp(QWidget):
         if self.cameraListBox.count() > 0:
             self.cameraListBox.setCurrentRow(0)
 
-
             
     def get_available_drives(self):
         if 'Windows' not in platform.system():
@@ -294,7 +296,8 @@ class MainApp(QWidget):
         drive_bitmask = ctypes.cdll.kernel32.GetLogicalDrives()
         return list(itertools.compress(string.ascii_uppercase,
                 map(lambda x:ord(x) - ord('0'), bin(drive_bitmask)[:1:-1])))
-            
+
+
     def printtime(self, now):
         y = str(now.year)
         month = now.month
@@ -311,24 +314,24 @@ class MainApp(QWidget):
 
         sec = now.second
         s = self.addZeroDigit(sec)
-            
         return y,m,d,h,mn,s
     
+
     def addZeroDigit(self, number):
         if number < 10:
             result = '0'+str(number)
         else:
-            result = str(number)
-            
+            result = str(number) 
         return result
     
+
     def shiftdata(self,data_array,data):
         data_array = np.roll(data_array,1)
         data_sum = np.sum(data)
         data_array[0] = data_sum
-
         return data_array, data_sum
     
+
     def reset_graphdata(self):
         self.ax.cla()
         # self.ax.set_ylim([0,260])
@@ -339,36 +342,41 @@ class MainApp(QWidget):
         self.s4 = np.zeros(500)
         self.t = np.arange(500)
 
+
     def part_inspection(self, sumValue):
         if sumValue < 100000:
             self.bottlePartBtn.setStyleSheet("background-color: green")
-            self.inspection_part = 1
+            self.inspection_part = Result.ACCEPT
         elif 100001<sumValue<200000:
             self.bottlePartBtn.setStyleSheet("background-color: orange")
-            self.inspection_part = 2
+            self.inspection_part = Result.INSPECT
         elif sumValue > 200001:
             self.bottlePartBtn.setStyleSheet("background-color: red")
-            self.inspection_part = 3
+            self.inspection_part = Result.REJECT
+
 
     def ROI_inspection(self, sumValue):
         if sumValue < 500000:
             self.bottleAllBtn.setStyleSheet("background-color: green")
-            self.inspection_ROI = 1
+            self.inspection_ROI = Result.ACCEPT
         elif 500001<sumValue<700000:
             self.bottleAllBtn.setStyleSheet("background-color: orange")
-            self.inspection_ROI = 2
+            self.inspection_ROI = Result.INSPECT
         elif sumValue > 700001:
             self.bottleAllBtn.setStyleSheet("background-color: red")
-            self.inspection_ROI = 3
+            self.inspection_ROI = Result.REJECT
     
+
     def changeValue(self, value):
         self.exposureValue.setText(str(value))
         #change3: move label position up(20 to 30)
         self.exposureValue.move(self.slider.x() + value, self.slider.y() - 30)
         
+
     def itemClicked_event(self,index):
         # print(index)
         self.device_connected = self.device_list[index]
+
 
     def closeEvent(self, event):
         try:
@@ -378,6 +386,7 @@ class MainApp(QWidget):
             pass
         print("Closing...")
         event.accept()
+
 
 if __name__ == "__main__":
     set_qdarkstyle_plot_theme()

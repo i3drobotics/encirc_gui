@@ -30,7 +30,7 @@ class MainApp(QWidget):
         self.setWindowTitle('ENCIRC')
         self.setWindowIcon(QIcon('i3dr_logo.png'))
         self.setup_ui()
-        self.device_connected = []
+        self.camera = None
 
     def setup_ui(self):
         """Initialize widgets.
@@ -131,95 +131,94 @@ class MainApp(QWidget):
 
         
     def control_camera(self):
+        if not self.device_list:
+            print("No devices to connect to.")
+            return
         if self.cameraConnectBtn.isChecked():
             self.setup_camera()
+            self.set_connect_button(connected=True)
         else:
             self.disconnect_camera()
+            self.set_connect_button(connected=False)
+
+    def set_connect_button(self, connected:bool):
+        if connected:
+            self.cameraConnectBtn.setText("Disconnect")
+            self.cameraConnectBtn.setStyleSheet("background-color: red")
+        else:
             self.cameraConnectBtn.setText("Connect")
             self.cameraConnectBtn.setStyleSheet("background-color: green")
 
     def setup_camera(self):
         """Initialize camera.
-        """ 
-        self.cameraConnectBtn.setText("Disconnect")
-        self.cameraConnectBtn.setStyleSheet("background-color: red")
-        device_info = []
+        """
+        if self.camera is not None:
+            print("Camera already connected.")
+            return
 
-        if self.device_connected:
-            device_info = self.device_connected
-            camera_name = device_info.GetUserDefinedName()
-            self.cameraStatusText.setText(camera_name+" Connected")
-        else:
-            # if camera is not chosen, try connect the 1st found device or connect nothing
-            try:
-                device_info = self.device_list[0]
-                camera_name = device_info.GetUserDefinedName()
-                self.cameraStatusText.setText(camera_name+" Connected")
-            except:
-                self.cameraStatusText.setText("No camera found")
-                device_info = []
-                if self.cameraConnectBtn.isChecked():
-                    self.cameraConnectBtn.setChecked(False)
-                    self.cameraConnectBtn.setText("Connect")
-                    self.cameraConnectBtn.setStyleSheet("background-color: green")
-        if device_info:
-            # throw a try condition just in case device is chosen and click connect while camera disconnected
-            try:
-                # Create pylon device information from parameters and connect
-                self.camera = pylon.InstantCamera(self.tlFactory.CreateDevice(device_info))
-                self.camera.Open()
-                self.camera.StartGrabbing()
-            
-                self.timer = QTimer()
-                self.timer.timeout.connect(self.display_video_stream)
-                self.timer.start(0)
-            except:
-                self.cameraStatusText.setText("No camera found")
-                if self.cameraConnectBtn.isChecked():
-                    self.cameraConnectBtn.setChecked(False)
-                    self.cameraConnectBtn.setText("Connect")
-                    self.cameraConnectBtn.setStyleSheet("background-color: green")
+        device_info = self.device_connected
+        camera_name = device_info.GetUserDefinedName()
+        self.cameraStatusText.setText(camera_name+" Connected")
+        
+        # Create stereo camera device information from parameters
+        self.camera = pylon.InstantCamera(self.tlFactory.CreateDevice(device_info))
+        self.camera.Open()
+
+        self.camera.StartGrabbing()
+    
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.display_video_stream)
+        self.timer.start(0)
 
     def display_video_stream(self):
         """Read frame from camera and repaint QLabel widget.
         """
-        self.camera.ExposureTime.SetValue(self.slider.value()*5000+5000)      
-        read_result = self.camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
-        
-        if read_result.GrabSucceeded():
-            self.ax.cla()
-            self.ax = self.insert_ax(self.ax)
-            frame = read_result.Array
+        try:
+            self.camera.ExposureTime.SetValue(self.slider.value()*5000+5000)      
+            read_result = self.camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
+            
+            if read_result.GrabSucceeded():
+                self.ax.cla()
+                self.ax = self.insert_ax(self.ax)
+                frame = read_result.Array
 
-            if not read_result.IsValid:
-                print("Failed to read from camera")
+                if not read_result.IsValid:
+                    print("Failed to read from camera")
 
-            frameROI = frame[400:800,:]
-            self.sample1 = frameROI[120:320,200:300]
-            self.sample2 = frameROI[120:320,350:500]
-            self.sample3 = frameROI[120:320,350:850]
-            self.sample4 = frameROI[120:320,400:1200]
+                frameROI = frame[400:800,:]
+                self.sample1 = frameROI[120:320,200:300]
+                self.sample2 = frameROI[120:320,350:500]
+                self.sample3 = frameROI[120:320,350:850]
+                self.sample4 = frameROI[120:320,400:1200]
 
-            frameROI_display = cv2.resize(frameROI,(768,160))
-            frame_display = np.rot90(frameROI_display,1)
+                frameROI_display = cv2.resize(frameROI,(768,160))
+                frame_display = np.rot90(frameROI_display,1)
 
-            image = qimage2ndarray.array2qimage(frame_display)  #SOLUTION FOR MEMORY LEAK
-            self.image_labelL.setPixmap(QPixmap.fromImage(image))
+                image = qimage2ndarray.array2qimage(frame_display)  #SOLUTION FOR MEMORY LEAK
+                self.image_labelL.setPixmap(QPixmap.fromImage(image))
 
-            self.s1, dataSum1 = self.shiftdata(self.s1, self.sample1)
-            self.s2, dataSum2 = self.shiftdata(self.s2, self.sample2)
-            self.s3, dataSum3 = self.shiftdata(self.s3, self.sample3)
-            self.s4, dataSum4 = self.shiftdata(self.s4, self.sample4)
-            self.ax.plot(self.t, self.s1, color='red')
-            self.ax.plot(self.t, self.s2, color='green')
-            self.ax.plot(self.t, self.s3, color='blue')
-            self.ax.plot(self.t, self.s4, color='black')
-            self.canvas.draw()
-            self.part_inspection(np.max([dataSum1,dataSum2,dataSum3,dataSum4]))
-            self.ROI_inspection(np.sum(frameROI))
+                self.s1, dataSum1 = self.shiftdata(self.s1, self.sample1)
+                self.s2, dataSum2 = self.shiftdata(self.s2, self.sample2)
+                self.s3, dataSum3 = self.shiftdata(self.s3, self.sample3)
+                self.s4, dataSum4 = self.shiftdata(self.s4, self.sample4)
+                self.ax.plot(self.t, self.s1, color='red')
+                self.ax.plot(self.t, self.s2, color='green')
+                self.ax.plot(self.t, self.s3, color='blue')
+                self.ax.plot(self.t, self.s4, color='black')
+                self.canvas.draw()
+                self.part_inspection(np.max([dataSum1,dataSum2,dataSum3,dataSum4]))
+                self.ROI_inspection(np.sum(frameROI))
+            read_result.Release()
 
+        except pylon.RuntimeException as e:
+            # Disconnected while running
+            self.timer.stop()
+            self.camera = None
+            self.image_labelL.clear()
+            self.cameraStatusText.setText("No camera connected")
+            self.getCameraList()
+            self.set_connect_button(connected=False)
 
-        read_result.Release()
 
     def insert_ax(self, ax):
         # self.ax.set_ylim([0,260])
@@ -235,12 +234,19 @@ class MainApp(QWidget):
 
 
     def disconnect_camera(self):
-        if not self.camera.IsCameraDeviceRemoved():
-            # self.phaseCam.stopCapture()
-            self.camera.Close()
-            self.timer.stop()
-            self.image_labelL.clear()
-            self.cameraStatusText.setText("No camera connected")
+        if self.camera is None:
+            print("No camera connected.")
+            return
+        if self.camera.IsCameraDeviceRemoved():
+            print("Camera already removed.")
+            self.camera = None
+            return
+        # self.phaseCam.stopCapture()
+        self.camera.Close()
+        self.timer.stop()
+        self.image_labelL.clear()
+        self.cameraStatusText.setText("No camera connected")
+        self.camera = None
             
     def getCameraList(self):
         self.cameraListBox.clear()
@@ -253,6 +259,11 @@ class MainApp(QWidget):
             # self.cameraList.activated.connect(self.itemClicked_event)
             self.cameraListBox.addItem(camera_name)
             self.cameraListBox.currentRowChanged.connect(self.itemClicked_event)
+        # Select the first camera in the list if possible
+        if self.cameraListBox.count() > 0:
+            self.cameraListBox.setCurrentRow(0)
+
+
             
     def get_available_drives(self):
         if 'Windows' not in platform.system():

@@ -136,10 +136,16 @@ class MainApp(QWidget):
             return
         if self.cameraConnectBtn.isChecked():
             self.setup_camera()
+            self.set_connect_button(connected=True)
+        else:
+            self.disconnect_camera()
+            self.set_connect_button(connected=False)
+
+    def set_connect_button(self, connected:bool):
+        if connected:
             self.cameraConnectBtn.setText("Disconnect")
             self.cameraConnectBtn.setStyleSheet("background-color: red")
         else:
-            self.disconnect_camera()
             self.cameraConnectBtn.setText("Connect")
             self.cameraConnectBtn.setStyleSheet("background-color: green")
 
@@ -167,43 +173,52 @@ class MainApp(QWidget):
     def display_video_stream(self):
         """Read frame from camera and repaint QLabel widget.
         """
-        self.camera.ExposureTime.SetValue(self.slider.value()*5000+5000)      
-        read_result = self.camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
-        
-        if read_result.GrabSucceeded():
-            self.ax.cla()
-            self.ax = self.insert_ax(self.ax)
-            frame = read_result.Array
+        try:
+            self.camera.ExposureTime.SetValue(self.slider.value()*5000+5000)      
+            read_result = self.camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
+            
+            if read_result.GrabSucceeded():
+                self.ax.cla()
+                self.ax = self.insert_ax(self.ax)
+                frame = read_result.Array
 
-            if not read_result.IsValid:
-                print("Failed to read from camera")
+                if not read_result.IsValid:
+                    print("Failed to read from camera")
 
-            frameROI = frame[400:800,:]
-            self.sample1 = frameROI[120:320,200:300]
-            self.sample2 = frameROI[120:320,350:500]
-            self.sample3 = frameROI[120:320,350:850]
-            self.sample4 = frameROI[120:320,400:1200]
+                frameROI = frame[400:800,:]
+                self.sample1 = frameROI[120:320,200:300]
+                self.sample2 = frameROI[120:320,350:500]
+                self.sample3 = frameROI[120:320,350:850]
+                self.sample4 = frameROI[120:320,400:1200]
 
-            frameROI_display = cv2.resize(frameROI,(768,160))
-            frame_display = np.rot90(frameROI_display,1)
+                frameROI_display = cv2.resize(frameROI,(768,160))
+                frame_display = np.rot90(frameROI_display,1)
 
-            image = qimage2ndarray.array2qimage(frame_display)  #SOLUTION FOR MEMORY LEAK
-            self.image_labelL.setPixmap(QPixmap.fromImage(image))
+                image = qimage2ndarray.array2qimage(frame_display)  #SOLUTION FOR MEMORY LEAK
+                self.image_labelL.setPixmap(QPixmap.fromImage(image))
 
-            self.s1, dataSum1 = self.shiftdata(self.s1, self.sample1)
-            self.s2, dataSum2 = self.shiftdata(self.s2, self.sample2)
-            self.s3, dataSum3 = self.shiftdata(self.s3, self.sample3)
-            self.s4, dataSum4 = self.shiftdata(self.s4, self.sample4)
-            self.ax.plot(self.t, self.s1, color='red')
-            self.ax.plot(self.t, self.s2, color='green')
-            self.ax.plot(self.t, self.s3, color='blue')
-            self.ax.plot(self.t, self.s4, color='black')
-            self.canvas.draw()
-            self.part_inspection(np.max([dataSum1,dataSum2,dataSum3,dataSum4]))
-            self.ROI_inspection(np.sum(frameROI))
+                self.s1, dataSum1 = self.shiftdata(self.s1, self.sample1)
+                self.s2, dataSum2 = self.shiftdata(self.s2, self.sample2)
+                self.s3, dataSum3 = self.shiftdata(self.s3, self.sample3)
+                self.s4, dataSum4 = self.shiftdata(self.s4, self.sample4)
+                self.ax.plot(self.t, self.s1, color='red')
+                self.ax.plot(self.t, self.s2, color='green')
+                self.ax.plot(self.t, self.s3, color='blue')
+                self.ax.plot(self.t, self.s4, color='black')
+                self.canvas.draw()
+                self.part_inspection(np.max([dataSum1,dataSum2,dataSum3,dataSum4]))
+                self.ROI_inspection(np.sum(frameROI))
+            read_result.Release()
 
+        except pylon.RuntimeException as e:
+            # Disconnected while running
+            self.timer.stop()
+            self.camera = None
+            self.image_labelL.clear()
+            self.cameraStatusText.setText("No camera connected")
+            self.getCameraList()
+            self.set_connect_button(connected=False)
 
-        read_result.Release()
 
     def insert_ax(self, ax):
         # self.ax.set_ylim([0,260])

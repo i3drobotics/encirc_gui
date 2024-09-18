@@ -30,6 +30,7 @@ class MainApp(QWidget):
         self.setWindowTitle('ENCIRC')
         self.setWindowIcon(QIcon('i3dr_logo.png'))
         self.setup_ui()
+        self.device_connected = []
 
     def setup_ui(self):
         """Initialize widgets.
@@ -132,8 +133,6 @@ class MainApp(QWidget):
     def control_camera(self):
         if self.cameraConnectBtn.isChecked():
             self.setup_camera()
-            self.cameraConnectBtn.setText("Disconnect")
-            self.cameraConnectBtn.setStyleSheet("background-color: red")
         else:
             self.disconnect_camera()
             self.cameraConnectBtn.setText("Connect")
@@ -141,26 +140,45 @@ class MainApp(QWidget):
 
     def setup_camera(self):
         """Initialize camera.
-        """  
-        try:
+        """ 
+        self.cameraConnectBtn.setText("Disconnect")
+        self.cameraConnectBtn.setStyleSheet("background-color: red")
+        device_info = []
+
+        if self.device_connected:
             device_info = self.device_connected
             camera_name = device_info.GetUserDefinedName()
             self.cameraStatusText.setText(camera_name+" Connected")
-        except:
-            device_list = listDevices()
-            device_info = device_list[0]
-            camera_name = device_info.getUniqueSerial()
-            self.cameraStatusText.setText(camera_name+" Connected")
-        
-        # Create stereo camera device information from parameters
-        self.camera = pylon.InstantCamera(self.tlFactory.CreateDevice(device_info))
-        self.camera.Open()
-
-        self.camera.StartGrabbing()
-    
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.display_video_stream)
-        self.timer.start(0)
+        else:
+            # if camera is not chosen, try connect the 1st found device or connect nothing
+            try:
+                device_info = self.device_list[0]
+                camera_name = device_info.GetUserDefinedName()
+                self.cameraStatusText.setText(camera_name+" Connected")
+            except:
+                self.cameraStatusText.setText("No camera found")
+                device_info = []
+                if self.cameraConnectBtn.isChecked():
+                    self.cameraConnectBtn.setChecked(False)
+                    self.cameraConnectBtn.setText("Connect")
+                    self.cameraConnectBtn.setStyleSheet("background-color: green")
+        if device_info:
+            # throw a try condition just in case device is chosen and click connect while camera disconnected
+            try:
+                # Create pylon device information from parameters and connect
+                self.camera = pylon.InstantCamera(self.tlFactory.CreateDevice(device_info))
+                self.camera.Open()
+                self.camera.StartGrabbing()
+            
+                self.timer = QTimer()
+                self.timer.timeout.connect(self.display_video_stream)
+                self.timer.start(0)
+            except:
+                self.cameraStatusText.setText("No camera found")
+                if self.cameraConnectBtn.isChecked():
+                    self.cameraConnectBtn.setChecked(False)
+                    self.cameraConnectBtn.setText("Connect")
+                    self.cameraConnectBtn.setStyleSheet("background-color: green")
 
     def display_video_stream(self):
         """Read frame from camera and repaint QLabel widget.
@@ -229,6 +247,7 @@ class MainApp(QWidget):
         self.tlFactory = pylon.TlFactory.GetInstance()
         self.device_list = self.tlFactory.EnumerateDevices()
         for device_info in self.device_list:
+            self.cameraListBox.setCurrentRow(0)
             camera_name = device_info.GetUserDefinedName()
             # self.cameraList.addItem(camera_name)
             # self.cameraList.activated.connect(self.itemClicked_event)

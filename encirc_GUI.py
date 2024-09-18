@@ -253,6 +253,7 @@ class MainApp(QWidget):
         self.tlFactory = pylon.TlFactory.GetInstance()
         self.device_list = self.tlFactory.EnumerateDevices()
         for device_info in self.device_list:
+            self.cameraListBox.setCurrentRow(0)
             camera_name = device_info.GetUserDefinedName()
             # self.cameraList.addItem(camera_name)
             # self.cameraList.activated.connect(self.itemClicked_event)

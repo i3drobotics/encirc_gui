@@ -30,6 +30,7 @@ class MainApp(QWidget):
         self.setWindowTitle('ENCIRC')
         self.setWindowIcon(QIcon('i3dr_logo.png'))
         self.setup_ui()
+        self.camera = None
 
     def setup_ui(self):
         """Initialize widgets.
@@ -130,6 +131,9 @@ class MainApp(QWidget):
 
         
     def control_camera(self):
+        if not self.device_list:
+            print("No devices to connect to.")
+            return
         if self.cameraConnectBtn.isChecked():
             self.setup_camera()
             self.cameraConnectBtn.setText("Disconnect")
@@ -141,16 +145,14 @@ class MainApp(QWidget):
 
     def setup_camera(self):
         """Initialize camera.
-        """  
-        try:
-            device_info = self.device_connected
-            camera_name = device_info.GetUserDefinedName()
-            self.cameraStatusText.setText(camera_name+" Connected")
-        except:
-            device_list = listDevices()
-            device_info = device_list[0]
-            camera_name = device_info.getUniqueSerial()
-            self.cameraStatusText.setText(camera_name+" Connected")
+        """
+        if self.camera is not None:
+            print("Camera already connected.")
+            return
+
+        device_info = self.device_connected
+        camera_name = device_info.GetUserDefinedName()
+        self.cameraStatusText.setText(camera_name+" Connected")
         
         # Create stereo camera device information from parameters
         self.camera = pylon.InstantCamera(self.tlFactory.CreateDevice(device_info))
@@ -217,12 +219,18 @@ class MainApp(QWidget):
 
 
     def disconnect_camera(self):
-        if not self.camera.IsCameraDeviceRemoved():
-            # self.phaseCam.stopCapture()
-            self.camera.Close()
-            self.timer.stop()
-            self.image_labelL.clear()
-            self.cameraStatusText.setText("No camera connected")
+        if self.camera is None:
+            print("No camera connected.")
+            return
+        if self.camera.IsCameraDeviceRemoved():
+            print("Camera already removed.")
+            return
+        # self.phaseCam.stopCapture()
+        self.camera.Close()
+        self.timer.stop()
+        self.image_labelL.clear()
+        self.cameraStatusText.setText("No camera connected")
+        self.camera = None
             
     def getCameraList(self):
         self.cameraListBox.clear()
@@ -234,6 +242,11 @@ class MainApp(QWidget):
             # self.cameraList.activated.connect(self.itemClicked_event)
             self.cameraListBox.addItem(camera_name)
             self.cameraListBox.currentRowChanged.connect(self.itemClicked_event)
+        # Select the first camera in the list if possible
+        if self.cameraListBox.count() > 0:
+            self.cameraListBox.setCurrentRow(0)
+
+
             
     def get_available_drives(self):
         if 'Windows' not in platform.system():

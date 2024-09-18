@@ -165,7 +165,7 @@ class MainApp(QWidget):
     def display_video_stream(self):
         """Read frame from camera and repaint QLabel widget.
         """
-        self.camera.ExposureTime.SetValue(self.slider.value()*5000+5000)  # 100000 microsecond          
+        self.camera.ExposureTime.SetValue(self.slider.value()*5000+5000)      
         read_result = self.camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         
         if read_result.GrabSucceeded():

@@ -26,11 +26,10 @@ class MainApp(QWidget):
         self.video_size = QSize(160, 768)
         self.camera_listbox_size = QSize(120, 400)
         self.canvas = FigureCanvas(plt.Figure(figsize=(5,2)))
+        self.ax = self.canvas.figure.subplots()
         self.setWindowTitle('ENCIRC')
         self.setWindowIcon(QIcon('i3dr_logo.png'))
         self.setup_ui()
-        self.frame_taken = 0
-        self.start_clicked = False
 
     def setup_ui(self):
         """Initialize widgets.
@@ -56,7 +55,6 @@ class MainApp(QWidget):
         self.cameraListBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # Allow expansion
         
         self.getCameraList()
-        self.insert_ax()
         self.reset_graphdata()
         
         self.cameraRefreshBtn = QPushButton("Refresh List")
@@ -73,7 +71,9 @@ class MainApp(QWidget):
         self.clearBtn.clicked.connect(self.clear_graph)
 
         self.bottlePartBtn = QPushButton(" ")
+        self.bottlePartBtn.setFixedSize(QSize(100, 100))
         self.bottleAllBtn = QPushButton(" ")
+        self.bottleAllBtn.setFixedSize(QSize(100, 100))
         self.bottlePartText = QLabel(self)
         self.bottlePartText.setText("Part of Bottle")
         self.bottleAllText = QLabel(self)
@@ -164,13 +164,13 @@ class MainApp(QWidget):
 
     def display_video_stream(self):
         """Read frame from camera and repaint QLabel widget.
-        """          
+        """
+        self.camera.ExposureTime.SetValue(self.slider.value()*5000+5000)      
         read_result = self.camera.RetrieveResult(5000, pylon.TimeoutHandling_ThrowException)
         
         if read_result.GrabSucceeded():
             self.ax.cla()
-            # self.ax.set_ylim([0,260])
-            self.ax.set_xlim([0,500])
+            self.ax = self.insert_ax(self.ax)
             frame = read_result.Array
 
             if not read_result.IsValid:
@@ -203,12 +203,13 @@ class MainApp(QWidget):
 
         read_result.Release()
 
-    def insert_ax(self):
-        self.ax = self.canvas.figure.subplots()
+    def insert_ax(self, ax):
         # self.ax.set_ylim([0,260])
-        self.ax.set_xlim([0,100])
-        self.ax.set(xlabel='time (s)', ylabel='Pixel',
+        ax.set_xlim([0,500])
+        ax.set(xlabel='time (s)', ylabel='Intensity',
             title='RGB')
+        
+        return ax
 
     def clear_graph(self):
         self.reset_graphdata()
@@ -278,7 +279,7 @@ class MainApp(QWidget):
     def reset_graphdata(self):
         self.ax.cla()
         # self.ax.set_ylim([0,260])
-        self.ax.set_xlim([0,500])
+        self.ax = self.insert_ax(self.ax)
         self.s1 = np.zeros(500)
         self.s2 = np.zeros(500)
         self.s3 = np.zeros(500)

@@ -4,6 +4,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 import qimage2ndarray
+import qdarkstyle
 
 import cv2
 import sys
@@ -52,9 +53,8 @@ class MainApp(QWidget):
         self.exposureText.setText("Exposure")
         
         self.cameraListBox = QListWidget()
-        self.cameraListBox.setFixedSize(self.camera_listbox_size)
+        self.cameraListBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # Allow expansion
         
-        # self.cameraList = QComboBox(self)
         self.getCameraList()
         self.insert_ax()
         self.reset_graphdata()
@@ -90,7 +90,7 @@ class MainApp(QWidget):
         self.devicelist_layout = QVBoxLayout()
         self.devicelist_layout.addWidget(self.cameraRefreshBtn)
         self.devicelist_layout.addWidget(self.cameraConnectBtn)
-        self.devicelist_layout.addWidget(self.cameraListBox)
+        self.devicelist_layout.addWidget(self.cameraListBox, stretch=1)  # Add stretch to cameraListBox
         
         self.exposure_display = QHBoxLayout()
         self.exposure_display.addWidget(self.exposureText)
@@ -122,11 +122,12 @@ class MainApp(QWidget):
         self.recommendation_layout.addWidget(self.recommendedText)
         self.inspect_layout.addLayout(self.recommendation_layout)
         
-        self.main_layout.addLayout(self.devicelist_layout)
-        self.main_layout.addLayout(self.image_display_layout)
-        self.main_layout.addLayout(self.inspect_layout)
+        self.main_layout.addLayout(self.devicelist_layout, 1)
+        self.main_layout.addLayout(self.image_display_layout, 4)
+        self.main_layout.addLayout(self.inspect_layout, 1)
 
         self.setLayout(self.main_layout)
+
         
     def control_camera(self):
         if self.cameraConnectBtn.isChecked():
@@ -315,8 +316,18 @@ class MainApp(QWidget):
         # print(index)
         self.device_connected = self.device_list[index]
 
+    def closeEvent(self, event):
+        try:
+            self.disconnect_camera()
+            print("Camera disconnected.")
+        except:
+            pass
+        print("Closing...")
+        event.accept()
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = MainApp()
+    app.setStyleSheet(qdarkstyle.load_stylesheet())
     win.show()
     sys.exit(app.exec_())

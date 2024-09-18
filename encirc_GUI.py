@@ -224,6 +224,7 @@ class MainApp(QWidget):
             return
         if self.camera.IsCameraDeviceRemoved():
             print("Camera already removed.")
+            self.camera = None
             return
         # self.phaseCam.stopCapture()
         self.camera.Close()

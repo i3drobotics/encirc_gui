@@ -19,6 +19,20 @@ import string
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
+def set_qdarkstyle_plot_theme():
+    plt.rcParams['axes.facecolor'] = '#19232D'
+    plt.rcParams['savefig.facecolor'] = '#19232D'
+    plt.rcParams['figure.facecolor'] = '#19232D'
+    plt.rcParams['axes.edgecolor'] = '#FFFFFF'
+    plt.rcParams['axes.labelcolor'] = '#FFFFFF'
+    plt.rcParams['xtick.color'] = '#FFFFFF'
+    plt.rcParams['ytick.color'] = '#FFFFFF'
+    plt.rcParams['axes.titlecolor'] = '#FFFFFF'
+    plt.rcParams['text.color'] = '#FFFFFF'
+    plt.rcParams['axes.grid'] = False
+    plt.rcParams['grid.linestyle'] = 'dashed'
+
+
 class MainApp(QWidget):
 
     def __init__(self):
@@ -204,7 +218,7 @@ class MainApp(QWidget):
                 self.ax.plot(self.t, self.s1, color='red')
                 self.ax.plot(self.t, self.s2, color='green')
                 self.ax.plot(self.t, self.s3, color='blue')
-                self.ax.plot(self.t, self.s4, color='black')
+                self.ax.plot(self.t, self.s4, color='grey')
                 self.canvas.draw()
                 self.part_inspection(np.max([dataSum1,dataSum2,dataSum3,dataSum4]))
                 self.ROI_inspection(np.sum(frameROI))
@@ -219,13 +233,11 @@ class MainApp(QWidget):
             self.getCameraList()
             self.set_connect_button(connected=False)
 
-
     def insert_ax(self, ax):
         # self.ax.set_ylim([0,260])
         ax.set_xlim([0,500])
         ax.set(xlabel='time (s)', ylabel='Intensity',
             title='RGB')
-        
         return ax
 
     def clear_graph(self):
@@ -357,6 +369,7 @@ class MainApp(QWidget):
         event.accept()
 
 if __name__ == "__main__":
+    set_qdarkstyle_plot_theme()
     app = QApplication(sys.argv)
     win = MainApp()
     app.setStyleSheet(qdarkstyle.load_stylesheet())

@@ -31,6 +31,8 @@ class MainApp(QWidget):
         self.setWindowIcon(QIcon('i3dr_logo.png'))
         self.setup_ui()
         self.camera = None
+        self.inspection_part = 0
+        self.inspection_ROI = 0
 
     def setup_ui(self):
         """Initialize widgets.
@@ -132,7 +134,7 @@ class MainApp(QWidget):
         
     def control_camera(self):
         if not self.device_list:
-            print("No devices to connect to.")
+            self.cameraStatusText.setText("No devices to connect to.")
             return
         if self.cameraConnectBtn.isChecked():
             self.setup_camera()
@@ -153,7 +155,7 @@ class MainApp(QWidget):
         """Initialize camera.
         """
         if self.camera is not None:
-            print("Camera already connected.")
+            self.cameraStatusText.setText("Camera already connected.")
             return
 
         device_info = self.device_connected
@@ -183,7 +185,7 @@ class MainApp(QWidget):
                 frame = read_result.Array
 
                 if not read_result.IsValid:
-                    print("Failed to read from camera")
+                    self.cameraStatusText.setText("Failed to read from camera")
 
                 frameROI = frame[400:800,:]
                 self.sample1 = frameROI[120:320,200:300]
@@ -208,6 +210,15 @@ class MainApp(QWidget):
                 self.canvas.draw()
                 self.part_inspection(np.max([dataSum1,dataSum2,dataSum3,dataSum4]))
                 self.ROI_inspection(np.sum(frameROI))
+                inspection_result = np.max([self.inspection_part,self.inspection_ROI])
+                if inspection_result == 3:
+                    self.recommendedText.setText("REJECT")
+                elif inspection_result == 2:
+                    self.recommendedText.setText("INSPECT")
+                elif inspection_result == 1:
+                    self.recommendedText.setText("ACCEPT")
+                else:
+                    self.recommendedText.setText("NO BOTTLE")
             read_result.Release()
 
         except pylon.RuntimeException as e:
@@ -319,24 +330,24 @@ class MainApp(QWidget):
     def part_inspection(self, sumValue):
         if sumValue < 100000:
             self.bottlePartBtn.setStyleSheet("background-color: green")
-            self.recommendedText.setText("ACCEPT")
+            self.inspection_part = 1
         elif 100001<sumValue<200000:
             self.bottlePartBtn.setStyleSheet("background-color: orange")
-            self.recommendedText.setText("INSPECT")
+            self.inspection_part = 2
         elif sumValue > 200001:
             self.bottlePartBtn.setStyleSheet("background-color: red")
-            self.recommendedText.setText("REJECT")
+            self.inspection_part = 3
 
     def ROI_inspection(self, sumValue):
         if sumValue < 500000:
             self.bottleAllBtn.setStyleSheet("background-color: green")
-            self.recommendedText.setText("ACCEPT")
+            self.inspection_ROI = 1
         elif 500001<sumValue<700000:
             self.bottleAllBtn.setStyleSheet("background-color: orange")
-            self.recommendedText.setText("INSPECT")
+            self.inspection_ROI = 2
         elif sumValue > 700001:
             self.bottleAllBtn.setStyleSheet("background-color: red")
-            self.recommendedText.setText("REJECT")
+            self.inspection_ROI = 3
     
     def changeValue(self, value):
         self.exposureValue.setText(str(value))

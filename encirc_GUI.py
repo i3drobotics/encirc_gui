@@ -206,10 +206,10 @@ class MainApp(QWidget):
                     self.cameraStatusText.setText("Failed to read from camera")
 
                 frameROI = frame[400:800,:]
-                self.sample1 = frameROI[120:320,200:300]
-                self.sample2 = frameROI[120:320,350:500]
-                self.sample3 = frameROI[120:320,350:850]
-                self.sample4 = frameROI[120:320,400:1200]
+                self.sample1 = frameROI[120:320,300:500]
+                self.sample2 = frameROI[120:320,500:850]
+                self.sample3 = frameROI[120:320,850:1200]
+                self.sample4 = frameROI[120:320,1200:1600]
 
                 frameROI_display = cv2.resize(frameROI,(768,160))
                 frame_display = np.rot90(frameROI_display,1)

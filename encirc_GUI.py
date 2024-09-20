@@ -249,7 +249,7 @@ class MainApp(QWidget):
         # self.ax.set_ylim([0,260])
         ax.set_xlim([0,500])
         ax.set(xlabel='time (s)', ylabel='Intensity',
-            title='RGB')
+            title='Intensity Variation')
         return ax
 
 

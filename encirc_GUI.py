@@ -42,8 +42,8 @@ class MainApp(QWidget):
     def __init__(self):
         super().__init__()
 
-        # Read config
-        self.config: dict = read_config()
+        # Read initial config
+        self.initial_config: dict = read_config()
 
         self.video_size = QSize(160, 768)
         self.camera_listbox_size = QSize(120, 400)
@@ -152,7 +152,7 @@ class MainApp(QWidget):
         self.roi_selector = ROISelector()
         self.inspect_layout.addWidget(self.roi_selector)
         # Set default values using the values in self.config
-        self.roi_selector.set_rois(self.config["regions"])
+        self.roi_selector.set_rois(self.initial_config["regions"])
         
         self.main_layout.addLayout(self.devicelist_layout, 1)
         self.main_layout.addLayout(self.image_display_layout, 4)
@@ -401,8 +401,29 @@ class MainApp(QWidget):
         # print(index)
         self.device_connected = self.device_list[index]
 
+    def get_current_config(self) -> dict:
+        config_dict = {}
+        current_rois = self.roi_selector.get_rois()
+        config_dict["regions"] = current_rois
+        return config_dict
+
+    def check_config_dialog(self):
+        """
+        Checks if the current configuration is different from the initial configuration.
+        If it is, pops up a dialog asking if the user wants to save the changes.
+        If the user chooses to save the changes, writes the current configuration to the config file.
+        """
+        current_config = self.get_current_config()
+        if current_config == self.initial_config:
+            return
+        qm = QMessageBox()
+        ret = qm.question(self, "Save New Configuration?", "The configuration has been changed. Do you want to save the changes?", qm.Yes | qm.No)
+        if ret == qm.Yes:
+            print("Saving config")
+            write_config(current_config)
 
     def closeEvent(self, event):
+        self.check_config_dialog()
         try:
             self.disconnect_camera()
             print("Camera disconnected.")

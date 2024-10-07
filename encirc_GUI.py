@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from result import Result, combine_results
+from config import region_dict, read_config, write_config
+from roi_selector import ROISelector
 
 def set_qdarkstyle_plot_theme():
     plt.rcParams['axes.facecolor'] = '#19232D'
@@ -39,6 +41,10 @@ class MainApp(QWidget):
 
     def __init__(self):
         super().__init__()
+
+        # Read config
+        self.config: dict = read_config()
+
         self.video_size = QSize(160, 768)
         self.camera_listbox_size = QSize(120, 400)
         self.canvas = FigureCanvas(plt.Figure(figsize=(5,2)))
@@ -46,6 +52,7 @@ class MainApp(QWidget):
         self.setWindowTitle('ENCIRC')
         self.setWindowIcon(QIcon('i3dr_logo.png'))
         self.setup_ui()
+
         self.camera = None
         self.inspection_part = Result.NO_BOTTLE
         self.inspection_ROI = Result.NO_BOTTLE
@@ -141,6 +148,11 @@ class MainApp(QWidget):
         self.recommendation_layout.addWidget(self.recommendationText)
         self.recommendation_layout.addWidget(self.recommendedText)
         self.inspect_layout.addLayout(self.recommendation_layout)
+
+        self.roi_selector = ROISelector()
+        self.inspect_layout.addWidget(self.roi_selector)
+        # Set default values using the values in self.config
+        self.roi_selector.set_rois(self.config["regions"])
         
         self.main_layout.addLayout(self.devicelist_layout, 1)
         self.main_layout.addLayout(self.image_display_layout, 4)
@@ -206,10 +218,22 @@ class MainApp(QWidget):
                     self.cameraStatusText.setText("Failed to read from camera")
 
                 frameROI = frame[400:800,:]
-                self.sample1 = frameROI[120:320,300:500]
-                self.sample2 = frameROI[120:320,500:850]
-                self.sample3 = frameROI[120:320,850:1200]
-                self.sample4 = frameROI[120:320,1200:1600]
+
+                # get ROI from the selector
+                rois = self.roi_selector.get_rois()
+
+                def get_sample(roi):
+                    return frameROI[roi["y_low"]:roi["y_high"], roi["x_low"]:roi["x_high"]]
+
+                # self.sample1 = frameROI[120:320,300:500]
+                # self.sample2 = frameROI[120:320,500:850]
+                # self.sample3 = frameROI[120:320,850:1200]
+                # self.sample4 = frameROI[120:320,1200:1600]
+
+                self.sample1 = get_sample(rois[0])
+                self.sample2 = get_sample(rois[1])
+                self.sample3 = get_sample(rois[2])
+                self.sample4 = get_sample(rois[3])
 
                 frameROI_display = cv2.resize(frameROI,(768,160))
                 frame_display = np.rot90(frameROI_display,1)

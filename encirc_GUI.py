@@ -63,15 +63,16 @@ class MainApp(QWidget):
         """  
         self.image_labelL = QLabel()
         self.image_labelL.setFixedSize(self.video_size)
-        
+
+        initial_exposure = int(self.initial_config["exposure"])
         self.slider = QSlider(Qt.Horizontal, self)
         self.slider.setRange(0, 10)
-        self.slider.setValue(0)
+        self.slider.setValue(initial_exposure)
         self.slider.setGeometry(0, 0, 120, 80)
         self.slider.valueChanged[int].connect(self.changeValue)
         
         self.exposureValue = QLabel(self)
-        self.exposureValue.setText("0")
+        self.exposureValue.setText(str(initial_exposure))
         
         self.save_msg = QLabel(self)
         
@@ -403,7 +404,9 @@ class MainApp(QWidget):
 
     def get_current_config(self) -> dict:
         config_dict = {}
+        current_exposure = self.slider.value()
         current_rois = self.roi_selector.get_rois()
+        config_dict["exposure"] = current_exposure
         config_dict["regions"] = current_rois
         return config_dict
 

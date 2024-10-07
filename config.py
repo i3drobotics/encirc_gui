@@ -34,5 +34,7 @@ if __name__ == '__main__':
 
     regions = [region1, region2, region3, region4]
 
-    data = {"regions": regions}
+    data = {}
+    data["exposure"] = 0
+    data["regions"] = regions
     write_config(data)

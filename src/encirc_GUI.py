@@ -1,21 +1,19 @@
 #!/usr/bin/env python
 
+import platform
+import ctypes
+import itertools
+import string
+import sys
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 import qimage2ndarray
 import qdarkstyle
-
 import cv2
-import sys
 import numpy as np
 from pypylon import pylon
-
-import platform
-import ctypes
-import itertools
-import string
-
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 

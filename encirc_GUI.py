@@ -375,24 +375,24 @@ class MainApp(QWidget):
         self.t = np.arange(500)
 
     def part_inspection(self, sumValue):
-        if sumValue < 100000:
+        if sumValue <= 100000:
             self.bottlePartBtn.setStyleSheet("background-color: green")
             self.inspection_part = Result.ACCEPT
-        elif 100001 < sumValue < 200000:
+        elif 100000 < sumValue <= 200000:
             self.bottlePartBtn.setStyleSheet("background-color: orange")
             self.inspection_part = Result.INSPECT
-        elif sumValue > 200001:
+        else:
             self.bottlePartBtn.setStyleSheet("background-color: red")
             self.inspection_part = Result.REJECT
 
     def ROI_inspection(self, sumValue):
-        if sumValue < 500000:
+        if sumValue <= 500000:
             self.bottleAllBtn.setStyleSheet("background-color: green")
             self.inspection_ROI = Result.ACCEPT
-        elif 500001 < sumValue < 700000:
+        elif 500000 < sumValue <= 700000:
             self.bottleAllBtn.setStyleSheet("background-color: orange")
             self.inspection_ROI = Result.INSPECT
-        elif sumValue > 700001:
+        else:
             self.bottleAllBtn.setStyleSheet("background-color: red")
             self.inspection_ROI = Result.REJECT
 

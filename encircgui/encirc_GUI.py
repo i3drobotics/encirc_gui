@@ -5,6 +5,7 @@ import ctypes
 import itertools
 import string
 import sys
+from pathlib import Path
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -21,6 +22,9 @@ from result import Result, combine_results
 from config import read_config, write_config
 from roi_selector import ROISelector
 from utils import set_qdarkstyle_plot_theme
+
+
+SCRIPT_DIR = Path(__file__).parent.absolute()
 
 
 class MainApp(QWidget):
@@ -40,7 +44,7 @@ class MainApp(QWidget):
         self.canvas = FigureCanvas(plt.Figure(figsize=(5, 2)))
         self.ax = self.canvas.figure.subplots()
         self.setWindowTitle("ENCIRC")
-        self.setWindowIcon(QIcon("i3dr_logo.png"))
+        self.setWindowIcon(QIcon(str(SCRIPT_DIR / "i3dr_logo.png")))
         self.setup_ui()
 
         self.camera = None

@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QApplication,
 )
 
-from roi import region_dict
+from utils import region_dict
 
 
 class ROISelector(QWidget):

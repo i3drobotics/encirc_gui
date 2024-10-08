@@ -3,7 +3,7 @@
 from pathlib import Path
 import json
 
-from roi import region_dict
+from utils import region_dict
 
 SCRIPT_DIR = Path(__file__).parent.absolute()
 DEFAULT_CONFIG_PATH = SCRIPT_DIR / "config.json"

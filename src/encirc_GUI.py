@@ -20,28 +20,19 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from result import Result, combine_results
-from config import region_dict, read_config, write_config
+from config import read_config, write_config
 from roi_selector import ROISelector
-
-
-def set_qdarkstyle_plot_theme():
-    plt.rcParams["axes.facecolor"] = "#19232D"
-    plt.rcParams["savefig.facecolor"] = "#19232D"
-    plt.rcParams["figure.facecolor"] = "#19232D"
-    plt.rcParams["axes.edgecolor"] = "#FFFFFF"
-    plt.rcParams["axes.labelcolor"] = "#FFFFFF"
-    plt.rcParams["xtick.color"] = "#FFFFFF"
-    plt.rcParams["ytick.color"] = "#FFFFFF"
-    plt.rcParams["axes.titlecolor"] = "#FFFFFF"
-    plt.rcParams["text.color"] = "#FFFFFF"
-    plt.rcParams["axes.grid"] = False
-    plt.rcParams["grid.linestyle"] = "dashed"
+from utils import set_qdarkstyle_plot_theme
 
 
 class MainApp(QWidget):
 
     def __init__(self):
         super().__init__()
+
+        # Set style as qdarkstyle, and set plot them to match
+        self.setStyleSheet(qdarkstyle.load_stylesheet())
+        set_qdarkstyle_plot_theme()
 
         # Read initial config
         self.initial_config: dict = read_config()
@@ -445,9 +436,7 @@ class MainApp(QWidget):
 
 
 if __name__ == "__main__":
-    set_qdarkstyle_plot_theme()
     app = QApplication(sys.argv)
     win = MainApp()
-    app.setStyleSheet(qdarkstyle.load_stylesheet())
     win.show()
     sys.exit(app.exec_())

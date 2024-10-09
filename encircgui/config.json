@@ -1,0 +1,29 @@
+{
+    "exposure": 2,
+    "regions": [
+        {
+            "x_low": 300,
+            "y_low": 120,
+            "x_high": 500,
+            "y_high": 320
+        },
+        {
+            "x_low": 500,
+            "y_low": 120,
+            "x_high": 850,
+            "y_high": 320
+        },
+        {
+            "x_low": 850,
+            "y_low": 120,
+            "x_high": 1200,
+            "y_high": 320
+        },
+        {
+            "x_low": 1200,
+            "y_low": 120,
+            "x_high": 1600,
+            "y_high": 320
+        }
+    ]
+}

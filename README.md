@@ -4,3 +4,8 @@
 ```
 pip install -r requirements.txt
 ```
+
+## Running the GUI
+```
+python encircgui
+```

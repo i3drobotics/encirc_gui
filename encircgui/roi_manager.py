@@ -158,6 +158,13 @@ class ROIManager(QWidget):
             self.start_pos = None
             self.end_pos = None
 
+    def update_spinbox(self, index: int, roi: RegionOfInterest):
+        """Update the spin boxes at the given index based on the provided ROI."""
+        x1_spin, y1_spin, x2_spin, y2_spin = self.roi_controls[index]
+        x1_spin.setValue(roi.x1)
+        y1_spin.setValue(roi.y1)
+        x2_spin.setValue(roi.x2)
+        y2_spin.setValue(roi.y2)
 
     def update_spin_box_from_drag(self):
         """Update the spin boxes based on the current drag positions."""
@@ -166,13 +173,9 @@ class ROIManager(QWidget):
             y1 = min(self.start_pos.y(), self.end_pos.y())
             x2 = max(self.start_pos.x(), self.end_pos.x())
             y2 = max(self.start_pos.y(), self.end_pos.y())
-            
-            # Update the spin boxes for the current ROI
-            x1_spin, y1_spin, x2_spin, y2_spin = self.roi_controls[self.current_roi_index]
-            x1_spin.setValue(x1)
-            y1_spin.setValue(y1)
-            x2_spin.setValue(x2)
-            y2_spin.setValue(y2)
+
+            roi = RegionOfInterest(x1=x1, y1=y1, x2=x2, y2=y2)
+            self.update_spinbox(self.current_roi_index, roi)
 
     def get_roi(self, index: int):
         return self.rois[index]
@@ -180,13 +183,7 @@ class ROIManager(QWidget):
     def set_roi(self, index: int, roi: RegionOfInterest):
         self.rois[index] = roi
         self.update_image()
-
-        # Update the spin boxes for the current ROI
-        x1_spin, y1_spin, x2_spin, y2_spin = self.roi_controls[index]
-        x1_spin.setValue(roi.x1)
-        y1_spin.setValue(roi.y1)
-        x2_spin.setValue(roi.x2)
-        y2_spin.setValue(roi.y2)
+        self.update_spinbox(index, roi)
 
     def get_rois(self):
         return self.rois

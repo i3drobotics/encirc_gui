@@ -137,10 +137,8 @@ class ROIManager(QWidget):
 
     def mouse_move_event(self, event):
         self.end_pos = event.pos()
-        self.update_image()  # Dynamically update the image with the current rectangle
-        
-        # Update the spin boxes as the mouse is moved
-        self.update_spin_box_from_drag()
+        self.update_image()  # Dynamically update the image
+        self.update_spin_box_from_drag() # Dynamically update the spin boxes
 
     def mouse_release_event(self, event):
         if event.button() == Qt.LeftButton:
@@ -181,6 +179,14 @@ class ROIManager(QWidget):
         return self.rois[index]
     
     def set_roi(self, index: int, roi: RegionOfInterest):
+        """
+        Set the RegionOfInterest at the specified index.
+        The image display and appropriate spin box are updated to reflect the changes.
+
+        Parameters:
+            index (int): The index of the ROI to set.
+            roi (RegionOfInterest): The RegionOfInterest object to set at the index.
+        """
         self.rois[index] = roi
         self.update_image()
         self.update_spinbox(index, roi)

@@ -36,6 +36,9 @@ class ROIManager(QWidget):
         
         self.init_ui()
 
+        self.start_pos = None
+        self.end_pos = None
+
     def init_ui(self):
         main_layout = QVBoxLayout()
 
@@ -100,19 +103,19 @@ class ROIManager(QWidget):
 
     def update_roi_from_spin(self, index):
         """Update the ROI when the spin boxes change."""
-        roi_dict = self.get_roi(index).__dict__
-        self.rois[index] = RegionOfInterest(**roi_dict)
+        self.rois[index] = self._spinbox_to_roi(index)
         self.update_image()
 
-    def get_roi(self, index: int):
+    def _spinbox_to_roi(self, index: int) -> RegionOfInterest:
         """Get the values from spin boxes as a RegionOfInterest."""
         roi_control = self.roi_controls[index]
-        return RegionOfInterest(
-            x1=min(roi_control[0].value(), roi_control[2].value()),
-            y1=min(roi_control[1].value(), roi_control[3].value()),
-            x2=max(roi_control[0].value(), roi_control[2].value()),
-            y2=max(roi_control[1].value(), roi_control[3].value()),
+        roi = RegionOfInterest(
+            x1=roi_control[0].value(),
+            y1=roi_control[1].value(),
+            x2=roi_control[2].value(),
+            y2=roi_control[3].value(),
         )
+        return roi
 
     def update_image(self):
         """Update the QLabel with the current image (with ROIs drawn)."""
@@ -133,12 +136,11 @@ class ROIManager(QWidget):
             self.end_pos = event.pos()  # Initialize end position
 
     def mouse_move_event(self, event):
-        if hasattr(self, 'start_pos'):
-            self.end_pos = event.pos()
-            self.update_image()  # Dynamically update the image with the current rectangle
-            
-            # Update the spin boxes as the mouse is moved
-            self.update_spin_boxes()
+        self.end_pos = event.pos()
+        self.update_image()  # Dynamically update the image with the current rectangle
+        
+        # Update the spin boxes as the mouse is moved
+        self.update_spin_box_from_drag()
 
     def mouse_release_event(self, event):
         if event.button() == Qt.LeftButton:
@@ -150,16 +152,16 @@ class ROIManager(QWidget):
                     x2=self.end_pos.x(), y2=self.end_pos.y()
                 )
                 self.update_image()
-                self.update_spin_boxes()  # Ensure spin boxes reflect final ROI
+                self.update_spin_box_from_drag()  # Ensure spin boxes reflect final ROI
 
             # Reset positions
             self.start_pos = None
             self.end_pos = None
 
 
-    def update_spin_boxes(self):
+    def update_spin_box_from_drag(self):
         """Update the spin boxes based on the current drag positions."""
-        if hasattr(self, 'start_pos') and self.start_pos is not None and hasattr(self, 'end_pos') and self.end_pos is not None:
+        if self.start_pos is not None and self.end_pos is not None:
             x1 = min(self.start_pos.x(), self.end_pos.x())
             y1 = min(self.start_pos.y(), self.end_pos.y())
             x2 = max(self.start_pos.x(), self.end_pos.x())
@@ -172,6 +174,26 @@ class ROIManager(QWidget):
             x2_spin.setValue(x2)
             y2_spin.setValue(y2)
 
+    def get_roi(self, index: int):
+        return self.rois[index]
+    
+    def set_roi(self, index: int, roi: RegionOfInterest):
+        self.rois[index] = roi
+        self.update_image()
+
+        # Update the spin boxes for the current ROI
+        x1_spin, y1_spin, x2_spin, y2_spin = self.roi_controls[index]
+        x1_spin.setValue(roi.x1)
+        y1_spin.setValue(roi.y1)
+        x2_spin.setValue(roi.x2)
+        y2_spin.setValue(roi.y2)
+
+    def get_rois(self):
+        return self.rois
+    
+    def set_rois(self, rois: list[RegionOfInterest]):
+        for i, roi in enumerate(rois):
+            self.set_roi(i, roi)
 
 
 if __name__ == "__main__":
@@ -182,5 +204,13 @@ if __name__ == "__main__":
     # Example of setting an image
     image = np.zeros((1000, 1000, 3), dtype=np.uint8)  # Replace with your image
     window.set_image(image)
+    # Example of setting ROIs
+    rois = [
+        RegionOfInterest(x1=100, y1=100, x2=200, y2=200),
+        RegionOfInterest(x1=300, y1=300, x2=400, y2=400),
+        RegionOfInterest(x1=500, y1=500, x2=600, y2=600),
+        RegionOfInterest(x1=700, y1=700, x2=800, y2=800),
+    ]
+    window.set_rois(rois)
     window.show()
     sys.exit(app.exec_())

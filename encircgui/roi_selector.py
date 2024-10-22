@@ -67,7 +67,7 @@ class ROISelector(QWidget):
 
         return region_dict(x_low, y_low, x_high, y_high)
 
-    def get_rois(self):
+    def get_rois(self) -> list[dict]:
         rois = []
         for i, roi_control in enumerate(self.roi_controls):
             rois.append(self.get_roi(i))

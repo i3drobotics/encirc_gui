@@ -2,7 +2,6 @@
 
 import cv2
 import numpy as np
-from dataclasses import dataclass
 from PyQt5.QtWidgets import (
     QWidget,
     QLabel,
@@ -16,20 +15,14 @@ from PyQt5.QtCore import Qt
 import qimage2ndarray
 from PyQt5.QtGui import QPixmap
 
-
-@dataclass
-class RegionOfInterest:
-    x1: int = None
-    y1: int = None
-    x2: int = None
-    y2: int = None
+from utils import region_dict
 
 
 class ROIManager(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         
-        self.rois = [RegionOfInterest(0, 0, 0, 0) for _ in range(4)]
+        self.rois = [region_dict(0, 0, 0, 0) for _ in range(4)]
         self.current_roi_index = 0
         self.image = None
         self.colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
@@ -93,7 +86,7 @@ class ROIManager(QWidget):
     def set_image(self, image: np.ndarray):
         """Set the image and reset any existing ROIs."""
         self.image = image
-        self.rois = [RegionOfInterest(0, 0, 0, 0) for _ in range(4)]
+        self.rois = [region_dict(0, 0, 0, 0) for _ in range(4)]
         self.update_image()
 
     def update_current_roi_index(self, index):
@@ -106,16 +99,16 @@ class ROIManager(QWidget):
         self.rois[index] = self._spinbox_to_roi(index)
         self.update_image()
 
-    def _spinbox_to_roi(self, index: int) -> RegionOfInterest:
-        """Get the values from spin boxes as a RegionOfInterest."""
+    def _spinbox_to_roi(self, index: int) -> dict[str, int]:
+        """Get the values from spin boxes as a region dictionary."""
         roi_control = self.roi_controls[index]
-        roi = RegionOfInterest(
-            x1=roi_control[0].value(),
-            y1=roi_control[1].value(),
-            x2=roi_control[2].value(),
-            y2=roi_control[3].value(),
-        )
-        return roi
+        x_low = min(roi_control[0].value(), roi_control[2].value())
+        y_low = min(roi_control[1].value(), roi_control[3].value())
+        x_high = max(roi_control[0].value(), roi_control[2].value())
+        y_high = max(roi_control[1].value(), roi_control[3].value())
+        return region_dict(
+            x_low=x_low, y_low=y_low, x_high=x_high, y_high=y_high
+            )
 
     def update_image(self):
         """Update the QLabel with the current image (with ROIs drawn)."""
@@ -124,8 +117,8 @@ class ROIManager(QWidget):
 
         image_copy = self.image.copy()
         for i, roi in enumerate(self.rois):
-            if roi.x1 is not None and roi.y1 is not None and roi.x2 is not None and roi.y2 is not None:
-                cv2.rectangle(image_copy, (roi.x1, roi.y1), (roi.x2, roi.y2), self.colors[i], 2)
+            if roi['x_low'] is not None and roi['y_low'] is not None and roi['x_high'] is not None and roi['y_high'] is not None:
+                cv2.rectangle(image_copy, (roi['x_low'], roi['y_low']), (roi['x_high'], roi['y_high']), self.colors[i], 2)
 
         qt_image = qimage2ndarray.array2qimage(image_copy)
         self.roi_label.setPixmap(QPixmap.fromImage(qt_image))
@@ -145,10 +138,13 @@ class ROIManager(QWidget):
             self.end_pos = event.pos()
             if self.start_pos is not None and self.end_pos is not None:  # Check before using the positions
                 # Store the final ROI in the list
-                self.rois[self.current_roi_index] = RegionOfInterest(
-                    x1=self.start_pos.x(), y1=self.start_pos.y(),
-                    x2=self.end_pos.x(), y2=self.end_pos.y()
-                )
+                x_low = min(self.start_pos.x(), self.end_pos.x())
+                y_low = min(self.start_pos.y(), self.end_pos.y())
+                x_high = max(self.start_pos.x(), self.end_pos.x())
+                y_high = max(self.start_pos.y(), self.end_pos.y())
+                self.rois[self.current_roi_index] = region_dict(
+                    x_low=x_low, y_low=y_low, x_high=x_high, y_high=y_high
+                    )
                 self.update_image()
                 self.update_spin_box_from_drag()  # Ensure spin boxes reflect final ROI
 
@@ -156,36 +152,36 @@ class ROIManager(QWidget):
             self.start_pos = None
             self.end_pos = None
 
-    def update_spinbox(self, index: int, roi: RegionOfInterest):
+    def update_spinbox(self, index: int, roi: dict[str, int]):
         """Update the spin boxes at the given index based on the provided ROI."""
         x1_spin, y1_spin, x2_spin, y2_spin = self.roi_controls[index]
-        x1_spin.setValue(roi.x1)
-        y1_spin.setValue(roi.y1)
-        x2_spin.setValue(roi.x2)
-        y2_spin.setValue(roi.y2)
+        x1_spin.setValue(roi['x_low'])
+        y1_spin.setValue(roi['y_low'])
+        x2_spin.setValue(roi['x_high'])
+        y2_spin.setValue(roi['y_high'])
 
     def update_spin_box_from_drag(self):
         """Update the spin boxes based on the current drag positions."""
         if self.start_pos is not None and self.end_pos is not None:
-            x1 = min(self.start_pos.x(), self.end_pos.x())
-            y1 = min(self.start_pos.y(), self.end_pos.y())
-            x2 = max(self.start_pos.x(), self.end_pos.x())
-            y2 = max(self.start_pos.y(), self.end_pos.y())
+            x_low = min(self.start_pos.x(), self.end_pos.x())
+            y_low = min(self.start_pos.y(), self.end_pos.y())
+            x_high = max(self.start_pos.x(), self.end_pos.x())
+            y_high = max(self.start_pos.y(), self.end_pos.y())
 
-            roi = RegionOfInterest(x1=x1, y1=y1, x2=x2, y2=y2)
+            roi = region_dict(x_low=x_low, y_low=y_low, x_high=x_high, y_high=y_high)
             self.update_spinbox(self.current_roi_index, roi)
 
     def get_roi(self, index: int):
         return self.rois[index]
     
-    def set_roi(self, index: int, roi: RegionOfInterest):
+    def set_roi(self, index: int, roi: dict[str, int]):
         """
-        Set the RegionOfInterest at the specified index.
+        Set the region dictionary at the specified index.
         The image display and appropriate spin box are updated to reflect the changes.
 
         Parameters:
             index (int): The index of the ROI to set.
-            roi (RegionOfInterest): The RegionOfInterest object to set at the index.
+            roi (dict[str, int]): The region dictionary to set at the index.
         """
         self.rois[index] = roi
         self.update_image()
@@ -194,7 +190,7 @@ class ROIManager(QWidget):
     def get_rois(self):
         return self.rois
     
-    def set_rois(self, rois: list[RegionOfInterest]):
+    def set_rois(self, rois: list[dict[str, int]]):
         for i, roi in enumerate(rois):
             self.set_roi(i, roi)
 
@@ -215,10 +211,10 @@ if __name__ == "__main__":
     
     # Example of setting ROIs
     rois = [
-        RegionOfInterest(x1=0, y1=0, x2=100, y2=100),
-        RegionOfInterest(x1=100, y1=100, x2=200, y2=200),
-        RegionOfInterest(x1=200, y1=200, x2=300, y2=300),
-        RegionOfInterest(x1=300, y1=300, x2=400, y2=400),
+        region_dict(x_low=0, y_low=0, x_high=100, y_high=100),
+        region_dict(x_low=100, y_low=100, x_high=200, y_high=200),
+        region_dict(x_low=200, y_low=200, x_high=300, y_high=300),
+        region_dict(x_low=300, y_low=300, x_high=400, y_high=400),
     ]
     window.set_rois(rois)
     window.show()

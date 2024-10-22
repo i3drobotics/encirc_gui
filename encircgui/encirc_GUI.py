@@ -21,6 +21,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from result import Result, combine_results
 from config import read_config, write_config
 from roi_selector import ROISelector
+from roi_manager import ROIManager
 from utils import set_qdarkstyle_plot_theme
 
 
@@ -106,7 +107,10 @@ class MainApp(QWidget):
 
         self.main_layout = QHBoxLayout()
         self.image_display = QHBoxLayout()
-        self.image_display.addWidget(self.image_labelL)
+
+        self.roi_manager = ROIManager()
+
+        self.image_display.addWidget(self.roi_manager)
         self.image_display.addWidget(self.canvas)
 
         self.devicelist_layout = QVBoxLayout()
@@ -146,10 +150,10 @@ class MainApp(QWidget):
         self.recommendation_layout.addWidget(self.recommendedText)
         self.inspect_layout.addLayout(self.recommendation_layout)
 
-        self.roi_selector = ROISelector()
-        self.inspect_layout.addWidget(self.roi_selector)
+        #self.roi_selector = ROISelector()
+        #self.inspect_layout.addWidget(self.roi_selector)
         # Set default values using the values in self.config
-        self.roi_selector.set_rois(self.initial_config["regions"])
+        #self.roi_selector.set_rois(self.initial_config["regions"])
 
         self.main_layout.addLayout(self.devicelist_layout, 1)
         self.main_layout.addLayout(self.image_display_layout, 4)
@@ -232,23 +236,26 @@ class MainApp(QWidget):
                 if not read_result.IsValid:
                     self.cameraStatusText.setText("Failed to read from camera")
 
-                frameROI = frame[400:800, :]
+                frame_trimmed = frame[400:800, :]
+                frame_trimmed = np.rot90(frame_trimmed, 1)
 
                 # get ROI from the selector
-                rois = self.roi_selector.get_rois()
+                #rois = self.roi_selector.get_rois()
+                rois = self.roi_manager.get_rois()
 
-                self.sample1 = self._get_region(frameROI, rois[0])
-                self.sample2 = self._get_region(frameROI, rois[1])
-                self.sample3 = self._get_region(frameROI, rois[2])
-                self.sample4 = self._get_region(frameROI, rois[3])
+                self.sample1 = self._get_region(frame_trimmed, rois[0])
+                self.sample2 = self._get_region(frame_trimmed, rois[1])
+                self.sample3 = self._get_region(frame_trimmed, rois[2])
+                self.sample4 = self._get_region(frame_trimmed, rois[3])
 
-                frameROI_display = cv2.resize(frameROI, (768, 160))
-                frame_display = np.rot90(frameROI_display, 1)
+                # frameROI_display = cv2.resize(frameROI, (768, 160))
+                # frame_display = np.rot90(frameROI_display, 1)
 
-                image = qimage2ndarray.array2qimage(
-                    frame_display
-                )  # SOLUTION FOR MEMORY LEAK
-                self.image_labelL.setPixmap(QPixmap.fromImage(image))
+                # image = qimage2ndarray.array2qimage(
+                #     frame_display
+                # )  # SOLUTION FOR MEMORY LEAK
+                # self.image_labelL.setPixmap(QPixmap.fromImage(image))
+                self.roi_manager.set_image(frame_trimmed)
 
                 self.s1, dataSum1 = self.shiftdata(self.s1, self.sample1)
                 self.s2, dataSum2 = self.shiftdata(self.s2, self.sample2)
@@ -258,7 +265,7 @@ class MainApp(QWidget):
                 self._plot_canvas()
 
                 self.part_inspection(np.max([dataSum1, dataSum2, dataSum3, dataSum4]))
-                self.ROI_inspection(np.sum(frameROI))
+                self.ROI_inspection(np.sum(frame_trimmed))
                 inspection_result = combine_results(
                     [self.inspection_part, self.inspection_ROI]
                 )
@@ -410,7 +417,8 @@ class MainApp(QWidget):
     def get_current_config(self) -> dict:
         config_dict = {}
         current_exposure = self.slider.value()
-        current_rois = self.roi_selector.get_rois()
+        #current_rois = self.roi_selector.get_rois()
+        current_rois = self.roi_manager.get_rois()
         config_dict["exposure"] = current_exposure
         config_dict["regions"] = current_rois
         return config_dict

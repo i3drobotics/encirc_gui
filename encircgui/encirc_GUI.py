@@ -54,9 +54,9 @@ class MainApp(QWidget):
         self.inspection_part = Result.NO_BOTTLE
         self.inspection_ROI = Result.NO_BOTTLE
 
-        now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        now = datetime.datetime.now().strftime(r"%Y%m%d_%H%M%S")
         path = DATA_DIR / f"encirc_data_{now}" / "measurement"
-        self.jsonsaver = JSONSaver(str(path))
+        self.jsonsaver = JSONSaver(str(path), 500)
 
     def setup_ui(self):
         """Initialize widgets."""

@@ -278,7 +278,7 @@ class MainApp(QWidget):
 
     def insert_ax(self, ax):
         # self.ax.set_ylim([0,260])
-        ax.set_xlim([0, 500])
+        ax.set_xlim([0, 850])
         ax.set(xlabel="time (s)", ylabel="Intensity", title="Intensity Variation")
         return ax
 
@@ -370,11 +370,11 @@ class MainApp(QWidget):
         self.ax.cla()
         # self.ax.set_ylim([0,260])
         self.ax = self.insert_ax(self.ax)
-        self.s1 = np.zeros(500)
-        self.s2 = np.zeros(500)
-        self.s3 = np.zeros(500)
-        self.s4 = np.zeros(500)
-        self.t = np.arange(500)
+        self.s1 = np.zeros(850)
+        self.s2 = np.zeros(850)
+        self.s3 = np.zeros(850)
+        self.s4 = np.zeros(850)
+        self.t = np.arange(850)
 
     def part_inspection(self, sumValue):
         if sumValue <= 100000:

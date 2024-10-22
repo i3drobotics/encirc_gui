@@ -194,6 +194,28 @@ class MainApp(QWidget):
         self.timer.timeout.connect(self.display_video_stream)
         self.timer.start(0)
 
+    @staticmethod
+    def _get_region(array: np.ndarray, roi: dict) -> np.ndarray:
+        return array[
+            roi["y_low"] : roi["y_high"], roi["x_low"] : roi["x_high"]
+        ]
+    
+    def _plot_canvas(self):
+        (line1,) = self.ax.plot(self.t, self.s1, color="red", label="Region 1")
+        (line2,) = self.ax.plot(
+            self.t, self.s2, color="green", label="Region 2"
+        )
+        (line3,) = self.ax.plot(self.t, self.s3, color="blue", label="Region 3")
+        (line4,) = self.ax.plot(
+            self.t, self.s4, color="yellow", label="Region 4"
+        )
+        self.ax.legend(
+            handles=[line1, line2, line3, line4], loc="upper right"
+        ).set_visible(True)
+
+        self.canvas.draw()
+
+
     def display_video_stream(self):
         """Read frame from camera and repaint QLabel widget."""
         try:
@@ -215,20 +237,10 @@ class MainApp(QWidget):
                 # get ROI from the selector
                 rois = self.roi_selector.get_rois()
 
-                def get_sample(roi):
-                    return frameROI[
-                        roi["y_low"] : roi["y_high"], roi["x_low"] : roi["x_high"]
-                    ]
-
-                # self.sample1 = frameROI[120:320,300:500]
-                # self.sample2 = frameROI[120:320,500:850]
-                # self.sample3 = frameROI[120:320,850:1200]
-                # self.sample4 = frameROI[120:320,1200:1600]
-
-                self.sample1 = get_sample(rois[0])
-                self.sample2 = get_sample(rois[1])
-                self.sample3 = get_sample(rois[2])
-                self.sample4 = get_sample(rois[3])
+                self.sample1 = self._get_region(frameROI, rois[0])
+                self.sample2 = self._get_region(frameROI, rois[1])
+                self.sample3 = self._get_region(frameROI, rois[2])
+                self.sample4 = self._get_region(frameROI, rois[3])
 
                 frameROI_display = cv2.resize(frameROI, (768, 160))
                 frame_display = np.rot90(frameROI_display, 1)
@@ -243,19 +255,8 @@ class MainApp(QWidget):
                 self.s3, dataSum3 = self.shiftdata(self.s3, self.sample3)
                 self.s4, dataSum4 = self.shiftdata(self.s4, self.sample4)
 
-                (line1,) = self.ax.plot(self.t, self.s1, color="red", label="Region 1")
-                (line2,) = self.ax.plot(
-                    self.t, self.s2, color="green", label="Region 2"
-                )
-                (line3,) = self.ax.plot(self.t, self.s3, color="blue", label="Region 3")
-                (line4,) = self.ax.plot(
-                    self.t, self.s4, color="yellow", label="Region 4"
-                )
-                self.ax.legend(
-                    handles=[line1, line2, line3, line4], loc="upper right"
-                ).set_visible(True)
+                self._plot_canvas()
 
-                self.canvas.draw()
                 self.part_inspection(np.max([dataSum1, dataSum2, dataSum3, dataSum4]))
                 self.ROI_inspection(np.sum(frameROI))
                 inspection_result = combine_results(
@@ -344,14 +345,22 @@ class MainApp(QWidget):
         s = self.addZeroDigit(sec)
         return y, m, d, h, mn, s
 
-    def addZeroDigit(self, number):
+    @staticmethod
+    def addZeroDigit(number):
         if number < 10:
             result = "0" + str(number)
         else:
             result = str(number)
         return result
 
-    def shiftdata(self, data_array, data):
+    @staticmethod
+    def shiftdata(data_array, data):
+        """
+        Shifts `data_array` to the right by one element, and inserts the sum of
+        `data` at the front of `data_array`.
+        
+        Returns the new value of `data_array` as well as the sum of `data`.
+        """
         data_array = np.roll(data_array, 1)
         data_sum = np.sum(data)
         data_array[0] = data_sum

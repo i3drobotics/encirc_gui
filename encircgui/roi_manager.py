@@ -201,18 +201,24 @@ class ROIManager(QWidget):
 
 if __name__ == "__main__":
     import sys
+    from pathlib import Path
+
+    script_dir = Path(__file__).parent.absolute()
 
     app = QApplication(sys.argv)
     window = ROIManager()
+
     # Example of setting an image
-    image = np.zeros((1000, 1000, 3), dtype=np.uint8)  # Replace with your image
-    window.set_image(image)
+    image_bgr = cv2.imread(script_dir / "i3dr_logo.png")
+    image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+    window.set_image(image_rgb)
+    
     # Example of setting ROIs
     rois = [
+        RegionOfInterest(x1=0, y1=0, x2=100, y2=100),
         RegionOfInterest(x1=100, y1=100, x2=200, y2=200),
+        RegionOfInterest(x1=200, y1=200, x2=300, y2=300),
         RegionOfInterest(x1=300, y1=300, x2=400, y2=400),
-        RegionOfInterest(x1=500, y1=500, x2=600, y2=600),
-        RegionOfInterest(x1=700, y1=700, x2=800, y2=800),
     ]
     window.set_rois(rois)
     window.show()

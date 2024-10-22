@@ -6,6 +6,7 @@ import itertools
 import string
 import sys
 from pathlib import Path
+import datetime
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -22,9 +23,11 @@ from result import Result, combine_results
 from config import read_config, write_config
 from roi_selector import ROISelector
 from utils import set_qdarkstyle_plot_theme
+from jsonsaver import JSONSaver
 
 
 SCRIPT_DIR = Path(__file__).parent.absolute()
+DATA_DIR = SCRIPT_DIR.parent / "data"
 
 
 class MainApp(QWidget):
@@ -50,6 +53,10 @@ class MainApp(QWidget):
         self.camera = None
         self.inspection_part = Result.NO_BOTTLE
         self.inspection_ROI = Result.NO_BOTTLE
+
+        now = datetime.datetime.now().strftime(r"%Y%m%d_%H%M%S")
+        path = DATA_DIR / f"encirc_data_{now}" / "measurement"
+        self.jsonsaver = JSONSaver(str(path), 500)
 
     def setup_ui(self):
         """Initialize widgets."""
@@ -218,8 +225,17 @@ class MainApp(QWidget):
 
     def display_video_stream(self):
         """Read frame from camera and repaint QLabel widget."""
+
+        # Create variables to store save data
+        data_dict = {}
+
         try:
-            self.camera.ExposureTime.SetValue(self.slider.value() * 5000 + 5000)
+            timestamp = datetime.datetime.now().strftime(r"%Y-%m-%d %H:%M:%S.%f")
+
+            exposure_slider = self.slider.value()
+            self.camera.ExposureTime.SetValue(exposure_slider * 5000 + 5000)
+            
+
             read_result = self.camera.RetrieveResult(
                 5000, pylon.TimeoutHandling_ThrowException
             )
@@ -265,6 +281,18 @@ class MainApp(QWidget):
                 self.recommendedText.setText(
                     inspection_result.name.replace("_", " ").title()
                 )
+
+                # Add data to dict to be saved as json
+                
+                data_dict["timestamp"] = timestamp
+                data_dict["exposure"] = exposure_slider
+                data_dict["dataSum1"] = int(dataSum1)
+                data_dict["dataSum2"] = int(dataSum2)
+                data_dict["dataSum3"] = int(dataSum3)
+                data_dict["dataSum4"] = int(dataSum4)
+                data_dict["result"] = inspection_result.name
+                self.jsonsaver.add_data(data_dict)
+
             read_result.Release()
 
         except pylon.RuntimeException as e:
@@ -436,6 +464,7 @@ class MainApp(QWidget):
             write_config(current_config)
 
     def closeEvent(self, event):
+        self.jsonsaver.close()
         self.check_config_dialog()
         try:
             self.disconnect_camera()

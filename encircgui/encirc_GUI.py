@@ -442,10 +442,10 @@ class MainApp(QWidget):
 
     def part_inspection(self, sumValue):
         inspection_result = Result.NO_BOTTLE
-        if sumValue <= 100000:
+        if sumValue < 100000:
             # self.bottlePartBtn.setStyleSheet("background-color: green")
             inspection_result = Result.ACCEPT
-        elif 100000 < sumValue <= 200000:
+        elif sumValue <= 200000:
             # self.bottlePartBtn.setStyleSheet("background-color: orange")
             inspection_result = Result.INSPECT
         else:
@@ -477,10 +477,10 @@ class MainApp(QWidget):
             self.regionText.setText(" ")
 
     def ROI_inspection(self, sumValue):
-        if sumValue <= 500000:
+        if sumValue < 500000:
             self.bottleAllBtn.setStyleSheet("background-color: green")
             self.inspection_ROI = Result.ACCEPT
-        elif 500000 < sumValue <= 700000:
+        elif sumValue <= 700000:
             self.bottleAllBtn.setStyleSheet("background-color: orange")
             self.inspection_ROI = Result.INSPECT
         else:

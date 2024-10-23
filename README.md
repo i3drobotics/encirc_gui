@@ -22,6 +22,45 @@ A region of interest is defined by two coordinate pairs: (x1, y1) is one point i
 
 When the program is closed, if any of the user specified values have changed, you will be prompted to update the configuration. If you choose to update the configuration, these new values get loaded in next time you run the program.
 
+## Saving format
+
+Data is saved in JSON format:
+
+```JSON
+[
+    {
+        "timestamp": "2024-10-23 10:12:26.195981",
+        "exposure": 2,
+        "dataSum1": 1564548,
+        "dataSum2": 1871599,
+        "dataSum3": 787807,
+        "dataSum4": 691330,
+        "result": "REJECT"
+    },
+    {
+        "timestamp": "2024-10-23 10:12:26.282915",
+        "exposure": 2,
+        "dataSum1": 2380169,
+        "dataSum2": 2854905,
+        "dataSum3": 1220305,
+        "dataSum4": 1081558,
+        "result": "REJECT"
+    }
+]
+```
+
+Here is an example with two entries, representing two frames of data. Files are named "measurement_0.json", "measurement_1.json" etc. Each file contains up to 500 entries. Once 500 entries are reached, a new file is created (if the last file was "measurement_4.json", the new file will be "measurement_5.json"). This prevents individual files from becoming too large and unwieldy.
+
+An individual entry shows:
+- the timestamp of the frame (format code "%Y-%m-%d %H:%M:%S.%f")
+- the exposure used to capture it
+- the sum of pixels in region 1
+- the sum of pixels in region 2
+- the sum of pixels in region 3
+- the sum of pixels in region 4
+- the result (NO_BOTTLE, ACCEPT, INSPECT, or REJECT)
+
+
 ## Useful regions?
 ```
 self.sample1 = frameROI[120:320,300:500]

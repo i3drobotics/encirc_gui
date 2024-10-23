@@ -132,6 +132,11 @@ class MainApp(QWidget):
         self.feature_layout.addWidget(self.slider)
         self.feature_layout.addWidget(self.clearBtn)
 
+        self.show_rois_checkbox = QCheckBox("Show ROIs")
+        self.show_rois_checkbox.setChecked(False)  # Default to unchecked
+        self.feature_layout.addWidget(self.show_rois_checkbox)
+
+
         self.devicelist_layout.addLayout(self.feature_layout)
 
         self.image_display_layout = QVBoxLayout()
@@ -258,12 +263,29 @@ class MainApp(QWidget):
                 self.sample3 = self._get_region(frameROI, rois[2])
                 self.sample4 = self._get_region(frameROI, rois[3])
 
-                frameROI_display = cv2.resize(frameROI, (768, 160))
-                frame_display = np.rot90(frameROI_display, 1)
+                # Convert to BGR if the image is grayscale
+                if len(frameROI.shape) == 2:  # Check if the image is grayscale (single channel)
+                    frameROI_display = cv2.cvtColor(frameROI, cv2.COLOR_GRAY2BGR)  # Convert to BGR
+                else:
+                    frameROI_display = frameROI.copy()
 
-                image = qimage2ndarray.array2qimage(
-                    frame_display
-                )  # SOLUTION FOR MEMORY LEAK
+                # Draw the rectangles for each ROI (using the coordinates from rois)
+                if self.show_rois_checkbox.isChecked():
+                    colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255)]  # Red, Green, Blue, Yellow
+                    thickness = 2
+                    rois = self.roi_selector.get_rois()
+
+                    for i, roi in enumerate(rois):
+                        cv2.rectangle(
+                            frameROI_display, 
+                            (roi["x_low"], roi["y_low"]), 
+                            (roi["x_high"], roi["y_high"]), 
+                            colors[i], thickness
+                        )
+                frameROI_display = cv2.resize(frameROI_display, (768, 160))
+                frame_display = np.rot90(frameROI_display, 1)
+                frame_display_rgb = cv2.cvtColor(frame_display, cv2.COLOR_BGR2RGB)
+                image = qimage2ndarray.array2qimage(frame_display_rgb)
                 self.image_labelL.setPixmap(QPixmap.fromImage(image))
 
                 self.s1, dataSum1 = self.shiftdata(self.s1, self.sample1)

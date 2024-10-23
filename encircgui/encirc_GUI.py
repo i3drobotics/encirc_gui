@@ -101,10 +101,22 @@ class MainApp(QWidget):
 
         self.bottlePartBtn = QPushButton(" ")
         self.bottlePartBtn.setFixedSize(QSize(100, 100))
+        self.bottlePart2Btn = QPushButton(" ")
+        self.bottlePart2Btn.setFixedSize(QSize(100, 100))
+        self.bottlePart3Btn = QPushButton(" ")
+        self.bottlePart3Btn.setFixedSize(QSize(100, 100))
+        self.bottlePart4Btn = QPushButton(" ")
+        self.bottlePart4Btn.setFixedSize(QSize(100, 100))
         self.bottleAllBtn = QPushButton(" ")
         self.bottleAllBtn.setFixedSize(QSize(100, 100))
         self.bottlePartText = QLabel(self)
-        self.bottlePartText.setText("Part of Bottle")
+        self.bottlePartText.setText("Neck")
+        self.bottlePart2Text = QLabel(self)
+        self.bottlePart2Text.setText("Shoulder")
+        self.bottlePart3Text = QLabel(self)
+        self.bottlePart3Text.setText("Upper Body")
+        self.bottlePart4Text = QLabel(self)
+        self.bottlePart4Text.setText("Lower Body")
         self.bottleAllText = QLabel(self)
         self.bottleAllText.setText("Whole Bottle")
         self.recommendationText = QLabel(self)
@@ -152,6 +164,18 @@ class MainApp(QWidget):
         self.part_layout.addWidget(self.bottlePartText)
         self.part_layout.addWidget(self.bottlePartBtn)
         self.inspect_layout.addLayout(self.part_layout)
+        self.part2_layout = QHBoxLayout()
+        self.part2_layout.addWidget(self.bottlePart2Text)
+        self.part2_layout.addWidget(self.bottlePart2Btn)
+        self.inspect_layout.addLayout(self.part2_layout)
+        self.part3_layout = QHBoxLayout()
+        self.part3_layout.addWidget(self.bottlePart3Text)
+        self.part3_layout.addWidget(self.bottlePart3Btn)
+        self.inspect_layout.addLayout(self.part3_layout)
+        self.part4_layout = QHBoxLayout()
+        self.part4_layout.addWidget(self.bottlePart4Text)
+        self.part4_layout.addWidget(self.bottlePart4Btn)
+        self.inspect_layout.addLayout(self.part4_layout)
         self.ROI_layout = QHBoxLayout()
         self.ROI_layout.addWidget(self.bottleAllText)
         self.ROI_layout.addWidget(self.bottleAllBtn)
@@ -442,10 +466,10 @@ class MainApp(QWidget):
 
     def part_inspection(self, sumValue):
         inspection_result = Result.NO_BOTTLE
-        if sumValue <= 100000:
+        if sumValue < 100000:
             # self.bottlePartBtn.setStyleSheet("background-color: green")
             inspection_result = Result.ACCEPT
-        elif 100000 < sumValue <= 200000:
+        elif 100000 <= sumValue <= 200000:
             # self.bottlePartBtn.setStyleSheet("background-color: orange")
             inspection_result = Result.INSPECT
         else:
@@ -455,32 +479,47 @@ class MainApp(QWidget):
     
     def part_inspection_display(self, inspectIndex):
         if inspectIndex == 1:
-            self.bottlePartBtn.setStyleSheet("background-color: green")
+            # self.bottlePartBtn.setStyleSheet("background-color: green")
             self.inspection_part = Result.ACCEPT
         elif inspectIndex == 2:
-            self.bottlePartBtn.setStyleSheet("background-color: orange")
+            # self.bottlePartBtn.setStyleSheet("background-color: orange")
             self.inspection_part = Result.INSPECT
         else:
-            self.bottlePartBtn.setStyleSheet("background-color: red")
+            # self.bottlePartBtn.setStyleSheet("background-color: red")
             self.inspection_part = Result.REJECT
 
     def target_region_display(self, r1, r2, r3, r4):
+        self.inspection_light(r1.value, self.bottlePartBtn)
+        self.inspection_light(r2.value, self.bottlePart2Btn)
+        self.inspection_light(r3.value, self.bottlePart3Btn)
+        self.inspection_light(r4.value, self.bottlePart4Btn)
+
+        target_regions = ""
         if r1.value > 1:
-            self.regionText.setText("Region 1") 
-        elif r2.value > 1:
-            self.regionText.setText("Region 2")
-        elif r3.value > 1:
-            self.regionText.setText("Region 3")
-        elif r4.value > 1:
-            self.regionText.setText("Region 4")
-        else:
-            self.regionText.setText(" ")
+            target_regions = target_regions + "Neck  "
+        if r2.value > 1:
+            target_regions = target_regions + "Shoulder  "
+        if r3.value > 1:
+            target_regions = target_regions + "Upper Body  "
+        if r4.value > 1:
+            target_regions = target_regions + "Lower Body  "
+
+        self.regionText.setText(target_regions)
+
+    def inspection_light(self, inspect_index, btn):
+        if inspect_index == 1:
+            btn.setStyleSheet("background-color: green")
+        elif inspect_index == 2:
+            btn.setStyleSheet("background-color: orange")
+        elif inspect_index == 3:
+            btn.setStyleSheet("background-color: red")
+
 
     def ROI_inspection(self, sumValue):
-        if sumValue <= 500000:
+        if sumValue < 500000:
             self.bottleAllBtn.setStyleSheet("background-color: green")
             self.inspection_ROI = Result.ACCEPT
-        elif 500000 < sumValue <= 700000:
+        elif 500000 <= sumValue <= 700000:
             self.bottleAllBtn.setStyleSheet("background-color: orange")
             self.inspection_ROI = Result.INSPECT
         else:

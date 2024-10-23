@@ -296,7 +296,7 @@ class MainApp(QWidget):
                 self._plot_canvas()
 
                 self.part_inspection(np.max([dataSum1, dataSum2, dataSum3, dataSum4]))
-                self.ROI_inspection(np.sum(frameROI))
+                self.ROI_inspection(dataSum1+dataSum2+dataSum3+dataSum4)
                 inspection_result = combine_results(
                     [self.inspection_part, self.inspection_ROI]
                 )

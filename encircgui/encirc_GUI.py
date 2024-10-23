@@ -110,6 +110,9 @@ class MainApp(QWidget):
         self.recommendationText = QLabel(self)
         self.recommendationText.setText("Recommendation: ")
         self.recommendedText = QLabel(self)
+        self.targetRegionText = QLabel(self)
+        self.targetRegionText.setText("Target Region: ")
+        self.regionText = QLabel(self)
 
         self.main_layout = QHBoxLayout()
         self.image_display = QHBoxLayout()
@@ -157,6 +160,10 @@ class MainApp(QWidget):
         self.recommendation_layout.addWidget(self.recommendationText)
         self.recommendation_layout.addWidget(self.recommendedText)
         self.inspect_layout.addLayout(self.recommendation_layout)
+        self.targetRegion_layout = QHBoxLayout()
+        self.targetRegion_layout.addWidget(self.targetRegionText)
+        self.targetRegion_layout.addWidget(self.regionText)
+        self.inspect_layout.addLayout(self.targetRegion_layout)
 
         self.roi_selector = ROISelector()
         self.inspect_layout.addWidget(self.roi_selector)
@@ -295,7 +302,14 @@ class MainApp(QWidget):
 
                 self._plot_canvas()
 
-                self.part_inspection(np.max([dataSum1, dataSum2, dataSum3, dataSum4]))
+                region1_result = self.part_inspection(dataSum1)
+                region2_result = self.part_inspection(dataSum2)
+                region3_result = self.part_inspection(dataSum3)
+                region4_result = self.part_inspection(dataSum4)
+
+                self.part_inspection_display(np.max([region1_result.value,region2_result.value,region3_result.value,region4_result.value]))
+                self.target_region_display(region1_result,region2_result,region3_result,region4_result)
+
                 self.ROI_inspection(dataSum1+dataSum2+dataSum3+dataSum4)
                 inspection_result = combine_results(
                     [self.inspection_part, self.inspection_ROI]
@@ -427,15 +441,40 @@ class MainApp(QWidget):
         self.t = np.arange(850)
 
     def part_inspection(self, sumValue):
+        inspection_result = Result.NO_BOTTLE
         if sumValue <= 100000:
+            # self.bottlePartBtn.setStyleSheet("background-color: green")
+            inspection_result = Result.ACCEPT
+        elif 100000 < sumValue <= 200000:
+            # self.bottlePartBtn.setStyleSheet("background-color: orange")
+            inspection_result = Result.INSPECT
+        else:
+            # self.bottlePartBtn.setStyleSheet("background-color: red")
+            inspection_result = Result.REJECT
+        return inspection_result
+    
+    def part_inspection_display(self, inspectIndex):
+        if inspectIndex == 1:
             self.bottlePartBtn.setStyleSheet("background-color: green")
             self.inspection_part = Result.ACCEPT
-        elif 100000 < sumValue <= 200000:
+        elif inspectIndex == 2:
             self.bottlePartBtn.setStyleSheet("background-color: orange")
             self.inspection_part = Result.INSPECT
         else:
             self.bottlePartBtn.setStyleSheet("background-color: red")
             self.inspection_part = Result.REJECT
+
+    def target_region_display(self, r1, r2, r3, r4):
+        if r1.value > 1:
+            self.regionText.setText("Region 1") 
+        elif r2.value > 1:
+            self.regionText.setText("Region 2")
+        elif r3.value > 1:
+            self.regionText.setText("Region 3")
+        elif r4.value > 1:
+            self.regionText.setText("Region 4")
+        else:
+            self.regionText.setText(" ")
 
     def ROI_inspection(self, sumValue):
         if sumValue <= 500000:

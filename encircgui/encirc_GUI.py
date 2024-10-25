@@ -20,14 +20,15 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from result import Result, combine_results
-from config import read_config, write_config
+from config import read_config, write_config, write_default_config
 from roi_selector import ROISelector
-from utils import set_qdarkstyle_plot_theme
+from utils import set_qdarkstyle_plot_theme, get_config_path
 from jsonsaver import JSONSaver
 
 
 SCRIPT_DIR = Path(__file__).parent.absolute()
 DATA_DIR = SCRIPT_DIR.parent / "data"
+CONFIG_PATH = get_config_path()
 
 
 class MainApp(QWidget):
@@ -38,6 +39,9 @@ class MainApp(QWidget):
         # Set style as qdarkstyle, and set plot them to match
         self.setStyleSheet(qdarkstyle.load_stylesheet())
         set_qdarkstyle_plot_theme()
+
+        if not CONFIG_PATH.exists():
+            write_default_config()
 
         # Read initial config
         self.initial_config: dict = read_config()
@@ -151,7 +155,6 @@ class MainApp(QWidget):
         self.show_rois_checkbox.setChecked(False)  # Default to unchecked
         self.feature_layout.addWidget(self.show_rois_checkbox)
 
-
         self.devicelist_layout.addLayout(self.feature_layout)
 
         self.image_display_layout = QVBoxLayout()
@@ -239,25 +242,18 @@ class MainApp(QWidget):
 
     @staticmethod
     def _get_region(array: np.ndarray, roi: dict) -> np.ndarray:
-        return array[
-            roi["y_low"] : roi["y_high"], roi["x_low"] : roi["x_high"]
-        ]
-    
+        return array[roi["y_low"] : roi["y_high"], roi["x_low"] : roi["x_high"]]
+
     def _plot_canvas(self):
         (line1,) = self.ax.plot(self.t, self.s1, color="red", label="Region 1")
-        (line2,) = self.ax.plot(
-            self.t, self.s2, color="green", label="Region 2"
-        )
+        (line2,) = self.ax.plot(self.t, self.s2, color="green", label="Region 2")
         (line3,) = self.ax.plot(self.t, self.s3, color="blue", label="Region 3")
-        (line4,) = self.ax.plot(
-            self.t, self.s4, color="yellow", label="Region 4"
-        )
+        (line4,) = self.ax.plot(self.t, self.s4, color="yellow", label="Region 4")
         self.ax.legend(
             handles=[line1, line2, line3, line4], loc="upper right"
         ).set_visible(True)
 
         self.canvas.draw()
-
 
     def display_video_stream(self):
         """Read frame from camera and repaint QLabel widget."""
@@ -270,7 +266,6 @@ class MainApp(QWidget):
 
             exposure_slider = self.slider.value()
             self.camera.ExposureTime.SetValue(exposure_slider * 5000 + 5000)
-            
 
             read_result = self.camera.RetrieveResult(
                 5000, pylon.TimeoutHandling_ThrowException
@@ -295,23 +290,33 @@ class MainApp(QWidget):
                 self.sample4 = self._get_region(frameROI, rois[3])
 
                 # Convert to BGR if the image is grayscale
-                if len(frameROI.shape) == 2:  # Check if the image is grayscale (single channel)
-                    frameROI_display = cv2.cvtColor(frameROI, cv2.COLOR_GRAY2BGR)  # Convert to BGR
+                if (
+                    len(frameROI.shape) == 2
+                ):  # Check if the image is grayscale (single channel)
+                    frameROI_display = cv2.cvtColor(
+                        frameROI, cv2.COLOR_GRAY2BGR
+                    )  # Convert to BGR
                 else:
                     frameROI_display = frameROI.copy()
 
                 # Draw the rectangles for each ROI (using the coordinates from rois)
                 if self.show_rois_checkbox.isChecked():
-                    colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255)]  # Red, Green, Blue, Yellow
+                    colors = [
+                        (0, 0, 255),
+                        (0, 255, 0),
+                        (255, 0, 0),
+                        (0, 255, 255),
+                    ]  # Red, Green, Blue, Yellow
                     thickness = 2
                     rois = self.roi_selector.get_rois()
 
                     for i, roi in enumerate(rois):
                         cv2.rectangle(
-                            frameROI_display, 
-                            (roi["x_low"], roi["y_low"]), 
-                            (roi["x_high"], roi["y_high"]), 
-                            colors[i], thickness
+                            frameROI_display,
+                            (roi["x_low"], roi["y_low"]),
+                            (roi["x_high"], roi["y_high"]),
+                            colors[i],
+                            thickness,
                         )
                 frameROI_display = cv2.resize(frameROI_display, (768, 160))
                 frame_display = np.rot90(frameROI_display, 1)
@@ -331,10 +336,21 @@ class MainApp(QWidget):
                 region3_result = self.part_inspection(dataSum3)
                 region4_result = self.part_inspection(dataSum4)
 
-                self.part_inspection_display(np.max([region1_result.value,region2_result.value,region3_result.value,region4_result.value]))
-                self.target_region_display(region1_result,region2_result,region3_result,region4_result)
+                self.part_inspection_display(
+                    np.max(
+                        [
+                            region1_result.value,
+                            region2_result.value,
+                            region3_result.value,
+                            region4_result.value,
+                        ]
+                    )
+                )
+                self.target_region_display(
+                    region1_result, region2_result, region3_result, region4_result
+                )
 
-                self.ROI_inspection(dataSum1+dataSum2+dataSum3+dataSum4)
+                self.ROI_inspection(dataSum1 + dataSum2 + dataSum3 + dataSum4)
                 inspection_result = combine_results(
                     [self.inspection_part, self.inspection_ROI]
                 )
@@ -343,7 +359,7 @@ class MainApp(QWidget):
                 )
 
                 # Add data to dict to be saved as json
-                
+
                 data_dict["timestamp"] = timestamp
                 data_dict["exposure"] = exposure_slider
                 data_dict["dataSum1"] = int(dataSum1)
@@ -446,7 +462,7 @@ class MainApp(QWidget):
         """
         Shifts `data_array` to the right by one element, and inserts the sum of
         `data` at the front of `data_array`.
-        
+
         Returns the new value of `data_array` as well as the sum of `data`.
         """
         data_array = np.roll(data_array, 1)
@@ -476,7 +492,7 @@ class MainApp(QWidget):
             # self.bottlePartBtn.setStyleSheet("background-color: red")
             inspection_result = Result.REJECT
         return inspection_result
-    
+
     def part_inspection_display(self, inspectIndex):
         if inspectIndex == 1:
             # self.bottlePartBtn.setStyleSheet("background-color: green")
@@ -513,7 +529,6 @@ class MainApp(QWidget):
             btn.setStyleSheet("background-color: orange")
         elif inspect_index == 3:
             btn.setStyleSheet("background-color: red")
-
 
     def ROI_inspection(self, sumValue):
         if sumValue < 500000:

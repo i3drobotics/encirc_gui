@@ -3,10 +3,10 @@
 from pathlib import Path
 import json
 
-from utils import region_dict
+from utils import region_dict, get_config_path
 
 SCRIPT_DIR = Path(__file__).parent.absolute()
-DEFAULT_CONFIG_PATH = SCRIPT_DIR / "config.json"
+DEFAULT_CONFIG_PATH = get_config_path()
 
 
 def write_config(config: dict, path=None) -> None:
@@ -25,7 +25,7 @@ def read_config(path=None) -> dict:
         return json.load(f)
 
 
-if __name__ == "__main__":
+def write_default_config():
     # Write default config file
     region1 = region_dict(300, 120, 500, 320)
     region2 = region_dict(500, 120, 850, 320)
@@ -38,3 +38,7 @@ if __name__ == "__main__":
     data["exposure"] = 0
     data["regions"] = regions
     write_config(data)
+
+
+if __name__ == "__main__":
+    write_default_config()

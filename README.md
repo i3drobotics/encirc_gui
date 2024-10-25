@@ -60,8 +60,18 @@ An individual entry shows:
 - the sum of pixels in region 4
 - the result (NO_BOTTLE, ACCEPT, INSPECT, or REJECT)
 
+## Dev Zone
 
-## Useful regions?
+### Build
+Run:
+```
+build.bat
+```
+This will make a directory called `encirc_GUI` in dist, containing an exe file and an _internal directory.
+
+Zip the `encirc_GUI` directory and add it to GitHub releases.
+
+### Useful regions?
 ```
 self.sample1 = frameROI[120:320,300:500]
 self.sample2 = frameROI[120:320,500:850]

@@ -15,7 +15,11 @@
   },
   {
    "optionDest": "console",
-   "value": true
+   "value": false
+  },
+  {
+   "optionDest": "icon_file",
+   "value": "D:/c_warren/Documents/GitHub/encirc_gui/encircgui/i3dr_logo.ico"
   },
   {
    "optionDest": "clean_build",
@@ -52,6 +56,10 @@
   {
    "optionDest": "pathex",
    "value": "D:/c_warren/Documents/GitHub/encirc_gui/encircgui"
+  },
+  {
+   "optionDest": "datas",
+   "value": "D:/c_warren/Documents/GitHub/encirc_gui/encircgui/i3dr_logo.png;."
   }
  ],
  "nonPyinstallerOptions": {

@@ -110,13 +110,13 @@ class MainApp(QWidget):
         self.bottleAllBtn = QPushButton(" ")
         self.bottleAllBtn.setFixedSize(QSize(100, 100))
         self.bottlePartText = QLabel(self)
-        self.bottlePartText.setText("Neck")
+        self.bottlePartText.setText("Region 1")
         self.bottlePart2Text = QLabel(self)
-        self.bottlePart2Text.setText("Shoulder")
+        self.bottlePart2Text.setText("Region 2")
         self.bottlePart3Text = QLabel(self)
-        self.bottlePart3Text.setText("Upper Body")
+        self.bottlePart3Text.setText("Region 3")
         self.bottlePart4Text = QLabel(self)
-        self.bottlePart4Text.setText("Lower Body")
+        self.bottlePart4Text.setText("Region 4")
         self.bottleAllText = QLabel(self)
         self.bottleAllText.setText("Whole Bottle")
         self.recommendationText = QLabel(self)
@@ -496,13 +496,13 @@ class MainApp(QWidget):
 
         target_regions = ""
         if r1.value > 1:
-            target_regions = target_regions + "Neck  "
+            target_regions = target_regions + "Region 1  "
         if r2.value > 1:
-            target_regions = target_regions + "Shoulder  "
+            target_regions = target_regions + "Region 2  "
         if r3.value > 1:
-            target_regions = target_regions + "Upper Body  "
+            target_regions = target_regions + "Region 3  "
         if r4.value > 1:
-            target_regions = target_regions + "Lower Body  "
+            target_regions = target_regions + "Region 4  "
 
         self.regionText.setText(target_regions)
 

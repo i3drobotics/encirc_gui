@@ -296,6 +296,12 @@ class MainApp(QWidget):
                     frameROI_display = cv2.cvtColor(
                         frameROI, cv2.COLOR_GRAY2BGR
                     )  # Convert to BGR
+                elif(
+                    frameROI.shape[2] == 2
+                ): # Check if it is a dart camera
+                    frameROI_display = cv2.cvtColor(
+                        frameROI[:,:,0], cv2.COLOR_GRAY2BGR
+                    )  #Convert 1st channel to BGR
                 else:
                     frameROI_display = frameROI.copy()
 

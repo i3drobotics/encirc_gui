@@ -7,6 +7,7 @@ import string
 import sys
 from pathlib import Path
 import datetime
+import time
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -92,12 +93,14 @@ class MainApp(QWidget):
 
         self.cameraRefreshBtn = QPushButton("Refresh List")
         self.cameraRefreshBtn.clicked.connect(self.getCameraList)
-        self.cameraConnectBtn = QPushButton("Connect")
+        self.cameraConnectBtn = QPushButton("Start")
         self.cameraConnectBtn.setStyleSheet("background-color: green")
         self.cameraConnectBtn.setCheckable(True)
         self.cameraConnectBtn.clicked.connect(self.control_camera)
         self.cameraStatusText = QLabel(self)
         self.cameraStatusText.setText("No camera connected")
+        self.processTimerText = QLabel(self)
+        self.processTimerText.setText("Time elapsed: 0.00 s")
 
         self.clearBtn = QPushButton("Clear Graph")
         self.clearBtn.setStyleSheet("background-color: green")
@@ -159,6 +162,7 @@ class MainApp(QWidget):
 
         self.image_display_layout = QVBoxLayout()
         self.image_display_layout.addWidget(self.cameraStatusText)
+        self.image_display_layout.addWidget(self.processTimerText)
         self.image_display_layout.addLayout(self.image_display)
         self.image_display_layout.addWidget(self.save_msg)
 
@@ -216,10 +220,10 @@ class MainApp(QWidget):
 
     def set_connect_button(self, connected: bool):
         if connected:
-            self.cameraConnectBtn.setText("Disconnect")
+            self.cameraConnectBtn.setText("Stop")
             self.cameraConnectBtn.setStyleSheet("background-color: red")
         else:
-            self.cameraConnectBtn.setText("Connect")
+            self.cameraConnectBtn.setText("Start")
             self.cameraConnectBtn.setStyleSheet("background-color: green")
 
     def setup_camera(self):
@@ -237,6 +241,7 @@ class MainApp(QWidget):
         self.camera.StartGrabbing()
 
         self.timer = QTimer()
+        self.start = time.time()
         self.timer.timeout.connect(self.display_video_stream)
         self.timer.start(0)
 
@@ -260,6 +265,8 @@ class MainApp(QWidget):
 
         # Create variables to store save data
         data_dict = {}
+        
+        self.processTimerText.setText("Time elapsed: "+str("%.2f" % float(time.time()-self.start))+" s")
 
         try:
             timestamp = datetime.datetime.now().strftime(r"%Y-%m-%d %H:%M:%S.%f")
@@ -268,7 +275,7 @@ class MainApp(QWidget):
             self.camera.ExposureTime.SetValue(exposure_slider * 5000 + 5000)
 
             read_result = self.camera.RetrieveResult(
-                5000, pylon.TimeoutHandling_ThrowException
+                5000
             )
 
             if read_result.GrabSucceeded():

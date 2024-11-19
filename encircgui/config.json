@@ -2,27 +2,27 @@
     "exposure": 0,
     "regions": [
         {
-            "x_low": 300,
+            "x_low": 1420,
             "y_low": 120,
-            "x_high": 500,
+            "x_high": 1620,
             "y_high": 320
         },
         {
-            "x_low": 500,
+            "x_low": 1070,
             "y_low": 120,
-            "x_high": 850,
+            "x_high": 1420,
             "y_high": 320
         },
         {
-            "x_low": 850,
+            "x_low": 720,
             "y_low": 120,
-            "x_high": 1200,
+            "x_high": 1070,
             "y_high": 320
         },
         {
-            "x_low": 1200,
+            "x_low": 320,
             "y_low": 120,
-            "x_high": 1600,
+            "x_high": 720,
             "y_high": 320
         }
     ]

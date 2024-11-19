@@ -266,7 +266,8 @@ class MainApp(QWidget):
         # Create variables to store save data
         data_dict = {}
         
-        self.processTimerText.setText("Time elapsed: "+str("%.2f" % float(time.time()-self.start))+" s")
+        time_elapsed = float(time.time()-self.start)
+        self.processTimerText.setText("Time elapsed: "+str("%.2f" % time_elapsed)+" s")
 
         try:
             timestamp = datetime.datetime.now().strftime(r"%Y-%m-%d %H:%M:%S.%f")
@@ -391,6 +392,10 @@ class MainApp(QWidget):
             self.image_labelL.clear()
             self.cameraStatusText.setText("No camera connected")
             self.getCameraList()
+            self.set_connect_button(connected=False)
+        
+        if time_elapsed > 36.0:
+            self.disconnect_camera()
             self.set_connect_button(connected=False)
 
     def insert_ax(self, ax):

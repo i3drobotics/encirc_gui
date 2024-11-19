@@ -383,6 +383,10 @@ class MainApp(QWidget):
                 data_dict["result"] = inspection_result.name
                 self.jsonsaver.add_data(data_dict)
 
+                if time_elapsed > 36.0:
+                    self.disconnect_camera()
+                    self.set_connect_button(connected=False)
+
             read_result.Release()
 
         except pylon.RuntimeException as e:
@@ -392,10 +396,6 @@ class MainApp(QWidget):
             self.image_labelL.clear()
             self.cameraStatusText.setText("No camera connected")
             self.getCameraList()
-            self.set_connect_button(connected=False)
-        
-        if time_elapsed > 36.0:
-            self.disconnect_camera()
             self.set_connect_button(connected=False)
 
     def insert_ax(self, ax):

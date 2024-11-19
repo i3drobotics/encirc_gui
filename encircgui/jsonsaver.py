@@ -2,11 +2,9 @@ import json
 from pathlib import Path
 
 class JSONSaver:
-    def __init__(self, base_filename, max_entries=1000):
+    def __init__(self, base_filename):
         self.base_path = Path(base_filename).parent
         self.base_filename = Path(base_filename).name
-        self.max_entries = max_entries
-        self.current_file_index = 0
         self.current_entry_count = 0
         self.data_list = []
         
@@ -17,20 +15,17 @@ class JSONSaver:
         """Add a new data dictionary to the current file."""
         self.data_list.append(data_dict)
         self.current_entry_count += 1
-        
-        if self.current_entry_count >= self.max_entries:
-            self.save_to_file()
-            self.current_entry_count = 0
-            self.data_list = []
 
     def save_to_file(self):
         """Save the collected data to a new JSON file."""
-        filename = self.base_path / f"{self.base_filename}_{self.current_file_index}.json"
+        if self.data_list == []:
+            return
+        filename = self.base_path / f"{self.base_filename}.json"
         with open(filename, 'w') as json_file:
             json.dump(self.data_list, json_file, indent=4)
         
-        self.current_file_index += 1
         print(f"Saved {len(self.data_list)} entries to {filename}")
+        self.data_list = []
 
     def close(self):
         """Save any remaining data before closing."""

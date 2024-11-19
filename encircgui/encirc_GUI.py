@@ -59,9 +59,7 @@ class MainApp(QWidget):
         self.inspection_part = Result.NO_BOTTLE
         self.inspection_ROI = Result.NO_BOTTLE
 
-        now = datetime.datetime.now().strftime(r"%Y%m%d_%H%M%S")
-        path = DATA_DIR / f"encirc_data_{now}" / "measurement"
-        self.jsonsaver = JSONSaver(str(path), 500)
+        self.jsonsaver = None
 
     def setup_ui(self):
         """Initialize widgets."""
@@ -245,6 +243,11 @@ class MainApp(QWidget):
         self.timer.timeout.connect(self.display_video_stream)
         self.timer.start(0)
 
+        # Start the saving
+        now = datetime.datetime.now().strftime(r"%Y%m%d_%H%M%S")
+        path = DATA_DIR / f"encirc_data_{now}" / "measurement"
+        self.jsonsaver = JSONSaver(str(path))
+
     @staticmethod
     def _get_region(array: np.ndarray, roi: dict) -> np.ndarray:
         return array[roi["y_low"] : roi["y_high"], roi["x_low"] : roi["x_high"]]
@@ -422,6 +425,8 @@ class MainApp(QWidget):
         self.image_labelL.clear()
         self.cameraStatusText.setText("No camera connected")
         self.camera = None
+
+        self.jsonsaver.close() # Save any remaining data
 
     def getCameraList(self):
         self.cameraListBox.clear()

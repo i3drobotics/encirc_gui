@@ -54,6 +54,7 @@ class MainApp(QWidget):
         self.setWindowTitle("ENCIRC")
         self.setWindowIcon(QIcon(str(SCRIPT_DIR / "i3dr_logo.png")))
         self.setup_ui()
+        self.full_rotation_time = 36.0
 
         self.camera = None
         self.inspection_part = Result.NO_BOTTLE
@@ -67,6 +68,7 @@ class MainApp(QWidget):
         self.image_labelL.setFixedSize(self.video_size)
 
         initial_exposure = int(self.initial_config["exposure"])
+        initial_sampletime = int(self.initial_config["sampletime"])
         self.slider = QSlider(Qt.Horizontal, self)
         self.slider.setRange(0, 10)
         self.slider.setValue(initial_exposure)
@@ -99,6 +101,14 @@ class MainApp(QWidget):
         self.cameraStatusText.setText("No camera connected")
         self.processTimerText = QLabel(self)
         self.processTimerText.setText("Time elapsed: 0.00 s")
+        self.sampleTimeText = QLabel(self)
+        self.sampleTimeText.setText("Set sample time in sec")
+        self.sampleTimeValue = QSpinBox(self)
+        self.sampleTimeValue.setSingleStep(1)
+        self.sampleTimeValue.setRange(0, 120)
+        self.sampleTimeValue.setValue(initial_sampletime)
+        self.secondText = QLabel(self)
+        self.secondText.setText("seconds")
 
         self.clearBtn = QPushButton("Clear Graph")
         self.clearBtn.setStyleSheet("background-color: green")
@@ -158,9 +168,15 @@ class MainApp(QWidget):
 
         self.devicelist_layout.addLayout(self.feature_layout)
 
+        self.time_display_layout = QHBoxLayout()
+        self.time_display_layout.addWidget(self.processTimerText)
+        self.time_display_layout.addWidget(self.sampleTimeText)
+        self.time_display_layout.addWidget(self.sampleTimeValue)
+        self.time_display_layout.addWidget(self.secondText)
+
         self.image_display_layout = QVBoxLayout()
         self.image_display_layout.addWidget(self.cameraStatusText)
-        self.image_display_layout.addWidget(self.processTimerText)
+        self.image_display_layout.addLayout(self.time_display_layout)
         self.image_display_layout.addLayout(self.image_display)
         self.image_display_layout.addWidget(self.save_msg)
 
@@ -278,6 +294,8 @@ class MainApp(QWidget):
             exposure_slider = self.slider.value()
             self.camera.ExposureTime.SetValue(exposure_slider * 5000 + 5000)
 
+            sample_time = self.sampleTimeValue.value()
+
             read_result = self.camera.RetrieveResult(
                 5000
             )
@@ -379,6 +397,7 @@ class MainApp(QWidget):
 
                 data_dict["timestamp"] = timestamp
                 data_dict["exposure"] = exposure_slider
+                data_dict["sampletime"] = sample_time
                 data_dict["dataSum1"] = int(dataSum1)
                 data_dict["dataSum2"] = int(dataSum2)
                 data_dict["dataSum3"] = int(dataSum3)
@@ -386,7 +405,7 @@ class MainApp(QWidget):
                 data_dict["result"] = inspection_result.name
                 self.jsonsaver.add_data(data_dict)
 
-                if time_elapsed > 36.0:
+                if time_elapsed > float(sample_time):
                     self.disconnect_camera()
                     self.set_connect_button(connected=False)
 
@@ -576,8 +595,10 @@ class MainApp(QWidget):
     def get_current_config(self) -> dict:
         config_dict = {}
         current_exposure = self.slider.value()
+        current_sampletime = self.sampleTimeValue.value()
         current_rois = self.roi_selector.get_rois()
         config_dict["exposure"] = current_exposure
+        config_dict["sampletime"] = current_sampletime
         config_dict["regions"] = current_rois
         return config_dict
 
@@ -602,8 +623,8 @@ class MainApp(QWidget):
             write_config(current_config)
 
     def closeEvent(self, event):
-        self.jsonsaver.close()
         self.check_config_dialog()
+        # self.jsonsaver.close()
         try:
             self.disconnect_camera()
             print("Camera disconnected.")

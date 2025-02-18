@@ -74,6 +74,9 @@ class MainApp(QWidget):
 
         initial_exposure = int(self.initial_config["exposure"])
         initial_sampletime = int(self.initial_config["sampletime"])
+        self.thresholds_individual = self.initial_config["thresholds"]["individual"]
+        self.thresholds_overall = self.initial_config["thresholds"]["overall"]
+
         self.slider = QSlider(Qt.Horizontal, self)
         self.slider.setRange(1, 10)
         self.slider.setValue(initial_exposure)
@@ -571,10 +574,10 @@ class MainApp(QWidget):
 
     def part_inspection(self, sumValue):
         inspection_result = Result.NO_BOTTLE
-        if sumValue < 100000:
+        if sumValue < self.thresholds_individual["accept"]:
             # self.bottlePartBtn.setStyleSheet("background-color: green")
             inspection_result = Result.ACCEPT
-        elif sumValue <= 200000:
+        elif sumValue <= self.thresholds_individual["inspect"]:
             # self.bottlePartBtn.setStyleSheet("background-color: orange")
             inspection_result = Result.INSPECT
         else:
@@ -620,10 +623,10 @@ class MainApp(QWidget):
             btn.setStyleSheet("background-color: red")
 
     def ROI_inspection(self, sumValue):
-        if sumValue < 500000:
+        if sumValue < self.thresholds_overall["accept"]:
             self.bottleAllBtn.setStyleSheet("background-color: green")
             self.inspection_ROI = Result.ACCEPT
-        elif sumValue <= 700000:
+        elif sumValue <= self.thresholds_overall["inspect"]:
             self.bottleAllBtn.setStyleSheet("background-color: orange")
             self.inspection_ROI = Result.INSPECT
         else:
@@ -646,6 +649,7 @@ class MainApp(QWidget):
         current_rois = self.roi_selector.get_rois()
         config_dict["exposure"] = current_exposure
         config_dict["sampletime"] = current_sampletime
+        config_dict["thresholds"] = {"individual": self.thresholds_individual, "overall": self.thresholds_overall}
         config_dict["regions"] = current_rois
         return config_dict
 

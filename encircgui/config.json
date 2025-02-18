@@ -1,6 +1,16 @@
 {
     "exposure": 1,
     "sampletime": 36,
+    "thresholds": {
+        "individual": {
+            "accept": 100000,
+            "inspect": 200000
+        },
+        "overall": {
+            "accept": 500000,
+            "inspect": 700000
+        }
+    },
     "regions": [
         {
             "x_low": 300,

@@ -36,6 +36,7 @@ def write_default_config():
 
     data = {}
     data["exposure"] = 0
+    data["sampletime"] = 36
     data["regions"] = regions
     write_config(data)
 

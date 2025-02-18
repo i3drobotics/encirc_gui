@@ -7,6 +7,7 @@ import string
 import sys
 from pathlib import Path
 import datetime
+import time
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -53,14 +54,18 @@ class MainApp(QWidget):
         self.setWindowTitle("ENCIRC")
         self.setWindowIcon(QIcon(str(SCRIPT_DIR / "i3dr_logo.png")))
         self.setup_ui()
+        self.full_rotation_time = 36.0
 
         self.camera = None
         self.inspection_part = Result.NO_BOTTLE
         self.inspection_ROI = Result.NO_BOTTLE
+        
+        self.max_dataSum1 = 0
+        self.max_dataSum2 = 0
+        self.max_dataSum3 = 0
+        self.max_dataSum4 = 0
 
-        now = datetime.datetime.now().strftime(r"%Y%m%d_%H%M%S")
-        path = DATA_DIR / f"encirc_data_{now}" / "measurement"
-        self.jsonsaver = JSONSaver(str(path), 500)
+        self.jsonsaver = None
 
     def setup_ui(self):
         """Initialize widgets."""
@@ -68,8 +73,9 @@ class MainApp(QWidget):
         self.image_labelL.setFixedSize(self.video_size)
 
         initial_exposure = int(self.initial_config["exposure"])
+        initial_sampletime = int(self.initial_config["sampletime"])
         self.slider = QSlider(Qt.Horizontal, self)
-        self.slider.setRange(0, 10)
+        self.slider.setRange(1, 10)
         self.slider.setValue(initial_exposure)
         self.slider.setGeometry(0, 0, 120, 80)
         self.slider.valueChanged[int].connect(self.changeValue)
@@ -80,7 +86,7 @@ class MainApp(QWidget):
         self.save_msg = QLabel(self)
 
         self.exposureText = QLabel(self)
-        self.exposureText.setText("Exposure")
+        self.exposureText.setText("Exposure (us)")
 
         self.cameraListBox = QListWidget()
         self.cameraListBox.setSizePolicy(
@@ -92,12 +98,22 @@ class MainApp(QWidget):
 
         self.cameraRefreshBtn = QPushButton("Refresh List")
         self.cameraRefreshBtn.clicked.connect(self.getCameraList)
-        self.cameraConnectBtn = QPushButton("Connect")
+        self.cameraConnectBtn = QPushButton("Start")
         self.cameraConnectBtn.setStyleSheet("background-color: green")
         self.cameraConnectBtn.setCheckable(True)
         self.cameraConnectBtn.clicked.connect(self.control_camera)
         self.cameraStatusText = QLabel(self)
         self.cameraStatusText.setText("No camera connected")
+        self.processTimerText = QLabel(self)
+        self.processTimerText.setText("Time elapsed: 0.00 s")
+        self.sampleTimeText = QLabel(self)
+        self.sampleTimeText.setText("Set sample time in sec")
+        self.sampleTimeValue = QSpinBox(self)
+        self.sampleTimeValue.setSingleStep(1)
+        self.sampleTimeValue.setRange(0, 120)
+        self.sampleTimeValue.setValue(initial_sampletime)
+        self.secondText = QLabel(self)
+        self.secondText.setText("seconds")
 
         self.clearBtn = QPushButton("Clear Graph")
         self.clearBtn.setStyleSheet("background-color: green")
@@ -113,14 +129,26 @@ class MainApp(QWidget):
         self.bottlePart4Btn.setFixedSize(QSize(100, 100))
         self.bottleAllBtn = QPushButton(" ")
         self.bottleAllBtn.setFixedSize(QSize(100, 100))
-        self.bottlePartText = QLabel(self)
-        self.bottlePartText.setText("Region 1")
+        self.bottlePart1Text = QLabel(self)
+        self.bottlePart1Text.setText("Region 1")
+        self.bottlePart1MaxText = QLabel(self)
+        self.bottlePart1MaxText.setText("Highest Intensity 1")
+        self.bottlePart1MaxValue = QLabel(self)
         self.bottlePart2Text = QLabel(self)
         self.bottlePart2Text.setText("Region 2")
+        self.bottlePart2MaxText = QLabel(self)
+        self.bottlePart2MaxText.setText("Highest Intensity 2")
+        self.bottlePart2MaxValue = QLabel(self)
         self.bottlePart3Text = QLabel(self)
         self.bottlePart3Text.setText("Region 3")
+        self.bottlePart3MaxText = QLabel(self)
+        self.bottlePart3MaxText.setText("Highest Intensity 3")
+        self.bottlePart3MaxValue = QLabel(self)
         self.bottlePart4Text = QLabel(self)
         self.bottlePart4Text.setText("Region 4")
+        self.bottlePart4MaxText = QLabel(self)
+        self.bottlePart4MaxText.setText("Highest Intensity 4")
+        self.bottlePart4MaxValue = QLabel(self)
         self.bottleAllText = QLabel(self)
         self.bottleAllText.setText("Whole Bottle")
         self.recommendationText = QLabel(self)
@@ -157,26 +185,49 @@ class MainApp(QWidget):
 
         self.devicelist_layout.addLayout(self.feature_layout)
 
+        self.time_display_layout = QHBoxLayout()
+        self.time_display_layout.addWidget(self.processTimerText)
+        self.time_display_layout.addWidget(self.sampleTimeText)
+        self.time_display_layout.addWidget(self.sampleTimeValue)
+        self.time_display_layout.addWidget(self.secondText)
+
         self.image_display_layout = QVBoxLayout()
         self.image_display_layout.addWidget(self.cameraStatusText)
+        self.image_display_layout.addLayout(self.time_display_layout)
         self.image_display_layout.addLayout(self.image_display)
         self.image_display_layout.addWidget(self.save_msg)
 
         self.inspect_layout = QVBoxLayout()
-        self.part_layout = QHBoxLayout()
-        self.part_layout.addWidget(self.bottlePartText)
-        self.part_layout.addWidget(self.bottlePartBtn)
-        self.inspect_layout.addLayout(self.part_layout)
+        self.part1_layout = QHBoxLayout()
+        self.part1Text_layout = QVBoxLayout()
+        self.part1Text_layout.addWidget(self.bottlePart1MaxText)
+        self.part1Text_layout.addWidget(self.bottlePart1MaxValue)
+        self.part1_layout.addWidget(self.bottlePart1Text)
+        self.part1_layout.addLayout(self.part1Text_layout)
+        self.part1_layout.addWidget(self.bottlePartBtn)
+        self.inspect_layout.addLayout(self.part1_layout)
         self.part2_layout = QHBoxLayout()
+        self.part2Text_layout = QVBoxLayout()
+        self.part2Text_layout.addWidget(self.bottlePart2MaxText)
+        self.part2Text_layout.addWidget(self.bottlePart2MaxValue)
         self.part2_layout.addWidget(self.bottlePart2Text)
+        self.part2_layout.addLayout(self.part2Text_layout)
         self.part2_layout.addWidget(self.bottlePart2Btn)
         self.inspect_layout.addLayout(self.part2_layout)
         self.part3_layout = QHBoxLayout()
+        self.part3Text_layout = QVBoxLayout()
+        self.part3Text_layout.addWidget(self.bottlePart3MaxText)
+        self.part3Text_layout.addWidget(self.bottlePart3MaxValue)
         self.part3_layout.addWidget(self.bottlePart3Text)
+        self.part3_layout.addLayout(self.part3Text_layout)
         self.part3_layout.addWidget(self.bottlePart3Btn)
         self.inspect_layout.addLayout(self.part3_layout)
         self.part4_layout = QHBoxLayout()
+        self.part4Text_layout = QVBoxLayout()
+        self.part4Text_layout.addWidget(self.bottlePart4MaxText)
+        self.part4Text_layout.addWidget(self.bottlePart4MaxValue)
         self.part4_layout.addWidget(self.bottlePart4Text)
+        self.part4_layout.addLayout(self.part4Text_layout)
         self.part4_layout.addWidget(self.bottlePart4Btn)
         self.inspect_layout.addLayout(self.part4_layout)
         self.ROI_layout = QHBoxLayout()
@@ -216,11 +267,15 @@ class MainApp(QWidget):
 
     def set_connect_button(self, connected: bool):
         if connected:
-            self.cameraConnectBtn.setText("Disconnect")
+            self.cameraConnectBtn.setText("Stop")
             self.cameraConnectBtn.setStyleSheet("background-color: red")
         else:
-            self.cameraConnectBtn.setText("Connect")
+            self.cameraConnectBtn.setText("Start")
             self.cameraConnectBtn.setStyleSheet("background-color: green")
+            self.max_dataSum1 = 0
+            self.max_dataSum2 = 0
+            self.max_dataSum3 = 0
+            self.max_dataSum4 = 0
 
     def setup_camera(self):
         """Initialize camera."""
@@ -237,8 +292,14 @@ class MainApp(QWidget):
         self.camera.StartGrabbing()
 
         self.timer = QTimer()
+        self.start = time.time()
         self.timer.timeout.connect(self.display_video_stream)
         self.timer.start(0)
+
+        # Start the saving
+        now = datetime.datetime.now().strftime(r"%Y%m%d_%H%M%S")
+        path = DATA_DIR / f"encirc_data_{now}" / "measurement"
+        self.jsonsaver = JSONSaver(str(path))
 
     @staticmethod
     def _get_region(array: np.ndarray, roi: dict) -> np.ndarray:
@@ -260,15 +321,20 @@ class MainApp(QWidget):
 
         # Create variables to store save data
         data_dict = {}
+        
+        time_elapsed = float(time.time()-self.start)
+        self.processTimerText.setText("Time elapsed: "+str("%.2f" % time_elapsed)+" s")
 
         try:
             timestamp = datetime.datetime.now().strftime(r"%Y-%m-%d %H:%M:%S.%f")
 
             exposure_slider = self.slider.value()
-            self.camera.ExposureTime.SetValue(exposure_slider * 5000 + 5000)
+            self.camera.ExposureTime.SetValue(exposure_slider * 1000)
+
+            sample_time = self.sampleTimeValue.value()
 
             read_result = self.camera.RetrieveResult(
-                5000, pylon.TimeoutHandling_ThrowException
+                5000
             )
 
             if read_result.GrabSucceeded():
@@ -334,6 +400,16 @@ class MainApp(QWidget):
                 self.s2, dataSum2 = self.shiftdata(self.s2, self.sample2)
                 self.s3, dataSum3 = self.shiftdata(self.s3, self.sample3)
                 self.s4, dataSum4 = self.shiftdata(self.s4, self.sample4)
+                
+                self.max_dataSum1 = self.maxData(dataSum1, self.max_dataSum1)
+                self.max_dataSum2 = self.maxData(dataSum2, self.max_dataSum2)
+                self.max_dataSum3 = self.maxData(dataSum3, self.max_dataSum3)
+                self.max_dataSum4 = self.maxData(dataSum4, self.max_dataSum4)
+
+                self.bottlePart1MaxValue.setText(str(self.max_dataSum1))
+                self.bottlePart2MaxValue.setText(str(self.max_dataSum2))
+                self.bottlePart3MaxValue.setText(str(self.max_dataSum3))
+                self.bottlePart4MaxValue.setText(str(self.max_dataSum4))
 
                 self._plot_canvas()
 
@@ -368,12 +444,17 @@ class MainApp(QWidget):
 
                 data_dict["timestamp"] = timestamp
                 data_dict["exposure"] = exposure_slider
+                data_dict["sampletime"] = sample_time
                 data_dict["dataSum1"] = int(dataSum1)
                 data_dict["dataSum2"] = int(dataSum2)
                 data_dict["dataSum3"] = int(dataSum3)
                 data_dict["dataSum4"] = int(dataSum4)
                 data_dict["result"] = inspection_result.name
                 self.jsonsaver.add_data(data_dict)
+
+                if time_elapsed > float(sample_time):
+                    self.disconnect_camera()
+                    self.set_connect_button(connected=False)
 
             read_result.Release()
 
@@ -410,6 +491,8 @@ class MainApp(QWidget):
         self.image_labelL.clear()
         self.cameraStatusText.setText("No camera connected")
         self.camera = None
+
+        self.jsonsaver.close() # Save any remaining data
 
     def getCameraList(self):
         self.cameraListBox.clear()
@@ -559,8 +642,10 @@ class MainApp(QWidget):
     def get_current_config(self) -> dict:
         config_dict = {}
         current_exposure = self.slider.value()
+        current_sampletime = self.sampleTimeValue.value()
         current_rois = self.roi_selector.get_rois()
         config_dict["exposure"] = current_exposure
+        config_dict["sampletime"] = current_sampletime
         config_dict["regions"] = current_rois
         return config_dict
 
@@ -585,8 +670,8 @@ class MainApp(QWidget):
             write_config(current_config)
 
     def closeEvent(self, event):
-        self.jsonsaver.close()
         self.check_config_dialog()
+        # self.jsonsaver.close()
         try:
             self.disconnect_camera()
             print("Camera disconnected.")
@@ -594,6 +679,11 @@ class MainApp(QWidget):
             pass
         print("Closing...")
         event.accept()
+        
+    def maxData(self, newData, maxData):
+        if newData > maxData:
+            maxData = newData
+        return maxData
 
 
 def main():

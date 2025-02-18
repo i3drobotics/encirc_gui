@@ -1,5 +1,6 @@
 {
-    "exposure": 0,
+    "exposure": 1,
+    "sampletime": 36,
     "regions": [
         {
             "x_low": 300,

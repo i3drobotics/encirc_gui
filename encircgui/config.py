@@ -35,8 +35,12 @@ def write_default_config():
     regions = [region1, region2, region3, region4]
 
     data = {}
-    data["exposure"] = 0
+    data["exposure"] = 1
     data["sampletime"] = 36
+    data["thresholds"] = {
+        "individual": {"accept": 100000, "inspect": 200000},
+        "overall": {"accept": 500000, "inspect": 700000}
+    }
     data["regions"] = regions
     write_config(data)
 
